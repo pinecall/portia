@@ -1,0 +1,13 @@
+{
+  "name": "portia",
+  "private": true,
+  "scripts": {
+    "dev": "cd apps/desktop && npm run dev",
+    "build": "cd apps/desktop && npm run build",
+    "dev:zenitel": "cd packages/zenitel-client && npm run dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.0"
+  },
+  "packageManager": "pnpm@10.0.0"
+}
