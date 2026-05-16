@@ -9,9 +9,9 @@
  * the `llm.tool_call` event and results sent back with `call.toolResult()`.
  */
 
-import { Pinecall } from '@pinecall/sdk'
-import type { Agent } from '@pinecall/sdk'
-import type { Call } from '@pinecall/sdk'
+import { Pinecall } from 'pinecall'
+import type { Agent } from 'pinecall'
+import type { Call } from 'pinecall'
 import type { PortiaDB } from '../db'
 import type { ZenitelClient } from '@pinecall/zenitel-client'
 import * as ToolDefs from './tools'

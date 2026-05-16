@@ -2,7 +2,17 @@
  * Tool definitions for the Portia intercom agent.
  * Identical to Julia's tools — extracted for reuse.
  */
-import type { ToolDef } from '@pinecall/sdk/ai'
+
+interface ToolParamSchema {
+  type: string
+  description: string
+}
+
+export interface ToolDef {
+  description: string
+  params: Record<string, ToolParamSchema>
+  required?: string[]
+}
 
 export const openDoor: ToolDef = {
   description:
