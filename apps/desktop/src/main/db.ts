@@ -144,7 +144,7 @@ export class PortiaDB {
   }
 
   updateTeamMember(id: string, updates: Record<string, any>) {
-    const allowed = ['status', 'phone', 'email', 'role', 'floor']
+    const allowed = ['status', 'phone', 'email', 'role', 'floor', 'name', 'initials']
     const pairs = Object.entries(updates).filter(([k]) => allowed.includes(k))
     if (pairs.length === 0) return null
     const sets = pairs.map(([k]) => `${k} = ?`).join(', ')
@@ -152,6 +152,31 @@ export class PortiaDB {
     this.db.run(`UPDATE team SET ${sets} WHERE id = ?`, vals)
     this._save()
     return true
+  }
+
+  addTeamMember(member: { id: string; name: string; role?: string; floor?: string; phone?: string; email?: string; status?: string; initials?: string }) {
+    this.db.run(
+      'INSERT OR REPLACE INTO team (id, name, role, floor, phone, email, status, initials) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [member.id, member.name, member.role || null, member.floor || null, member.phone || null, member.email || null, member.status || 'available', member.initials || member.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()]
+    )
+    this._save()
+    return member
+  }
+
+  deleteTeamMember(id: string) {
+    this.db.run('DELETE FROM team WHERE id = ?', [id])
+    this._save()
+    return true
+  }
+
+  /** Wipe all data (for seed/reset). Config is preserved. */
+  clearAll() {
+    this.db.run('DELETE FROM team')
+    this.db.run('DELETE FROM access_codes')
+    this.db.run('DELETE FROM visits')
+    this.db.run('DELETE FROM events')
+    this.db.run('DELETE FROM escalations')
+    this._save()
   }
 
   getTeamSummary(): string {

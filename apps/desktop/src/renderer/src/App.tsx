@@ -8,6 +8,10 @@ import {
 } from 'lucide-react'
 import { useZenitel } from './hooks/useZenitel'
 import { useAgent, useElapsed, STAGES } from './hooks/useAgent'
+import TeamPage from './pages/TeamPage'
+import CodesPage from './pages/CodesPage'
+import VisitorsPage from './pages/VisitorsPage'
+import EventsPage from './pages/EventsPage'
 
 declare global {
   interface Window {
@@ -232,7 +236,8 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'visitors', label: 'Visitors', icon: Users },
+  { id: 'team', label: 'Team', icon: Users },
+  { id: 'visitors', label: 'Visitors', icon: UserCheck },
   { id: 'codes', label: 'Access Codes', icon: Key },
   { id: 'events', label: 'Events', icon: FileText },
   { id: 'camera', label: 'Camera', icon: Camera },
@@ -275,9 +280,10 @@ function Dashboard({ config }: { config: any }) {
       <main className="main-content">
         {page === 'dashboard' && (liveCall ? <LiveCallView call={liveCall} config={config} /> : <DashboardPage zenitel={zenitel} config={config} />)}
         {page === 'camera' && <CameraPage config={config} />}
-        {page === 'visitors' && <PlaceholderPage title="Visitors" desc="Visit history will appear here once the agent handles calls." icon={Users} />}
-        {page === 'codes' && <PlaceholderPage title="Access Codes" desc="Manage one-time and permanent access codes." icon={Key} />}
-        {page === 'events' && <PlaceholderPage title="Events" desc="System events and call logs." icon={FileText} />}
+        {page === 'team' && <TeamPage />}
+        {page === 'visitors' && <VisitorsPage />}
+        {page === 'codes' && <CodesPage />}
+        {page === 'events' && <EventsPage />}
         {page === 'settings' && <SettingsPage config={config} zenitel={zenitel} />}
       </main>
     </div>
