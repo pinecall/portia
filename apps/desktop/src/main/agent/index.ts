@@ -9,9 +9,9 @@
  * the `llm.tool_call` event and results sent back with `call.toolResult()`.
  */
 
-import { Pinecall } from 'pinecall'
-import type { Agent } from 'pinecall'
-import type { Call } from 'pinecall'
+import { Pinecall } from '@pinecall/core'
+import type { Agent } from '@pinecall/core'
+import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '../db'
 import type { ZenitelClient } from '@pinecall/zenitel-client'
 import * as ToolDefs from './tools'
@@ -167,25 +167,18 @@ export async function createAgent(opts: PortiaAgentOptions) {
   console.log(`[Portia Agent] Prompt: ${prompt.length} chars`)
   console.log(`[Portia Agent] Phone: ${opts.sipUri}`)
 
-  // Create agent with server-side LLM
+  // Create agent with server-side LLM, tools, and greeting
   const agent = pc.agent(agentId, {
+    voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
+    language: opts.language || 'es',
+    stt: 'deepgram-flux',
+    turnDetection: 'native',
     llm: {
       engine: 'openai',
       model: 'gpt-4.1-mini',
       enabled: true,
       instructions: prompt,
-    } as any,
-    voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
-    language: opts.language || 'es',
-    stt: 'deepgram-flux',
-    turnDetection: 'native',
-  })
-
-  // Send tools + greeting + LLM config in one configure event
-  ;(agent as any)._send({
-    event: 'agent.configure',
-    agent_id: agentId,
-    llm: { engine: 'openai', model: 'gpt-4.1-mini', enabled: true, instructions: prompt },
+    },
     tools,
     greeting,
   })
@@ -292,8 +285,8 @@ export async function createAgent(opts: PortiaAgentOptions) {
       results.push({ tool_call_id: tc.id, result })
     }
 
-    // Send all results back to server in one message
-    ;(agent as any)._send({
+    // Send all results back to server
+    agent.send({
       event: 'llm.tool_result',
       call_id: call.id,
       msg_id: msgId,
