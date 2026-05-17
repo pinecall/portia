@@ -32,7 +32,7 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
     const { TcivClient } = await import('tciv-client')
 
     const sipDomain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
-    const sipId = config.sipId || `portia-${Math.random().toString(36).slice(2, 6)}`
+    const sipId = config.agentPhone || `portia-${Math.random().toString(36).slice(2, 6)}`
     const sipUri = `sip:${sipId}@${sipDomain}`
 
     const zenitel = new TcivClient({
