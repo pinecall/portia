@@ -31,7 +31,7 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
 
   try {
     const { default: createAgent } = await import('./index')
-    const { ZenitelClient } = await import('@pinecall/zenitel-client')
+    const { ZenitelClient } = await import('zenitel-client')
 
     const sipDomain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
     const sipId = config.sipId || `portia-${Math.random().toString(36).slice(2, 6)}`

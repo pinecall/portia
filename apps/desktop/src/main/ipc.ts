@@ -6,7 +6,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron'
-import { ZenitelClient, scanNetwork } from '@pinecall/zenitel-client'
+import { ZenitelClient, scanNetwork } from 'zenitel-client'
 import type { PortiaDB } from './db'
 
 export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {

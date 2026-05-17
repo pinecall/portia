@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@pinecall/core', '@pinecall/zenitel-client'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@pinecall/core', 'zenitel-client'] })],
     build: {
       rollupOptions: {
         external: ['sql.js']

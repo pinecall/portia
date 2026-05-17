@@ -14,12 +14,12 @@
   },
   "dependencies": {
     "@pinecall/core": "^0.0.1-beta.7",
-    "@pinecall/zenitel-client": "^0.0.1-beta.0",
     "@types/ws": "^8.18.1",
     "electron-updater": "^6.3.0",
     "lucide-react": "^1.16.0",
     "sql.js": "^1.12.0",
-    "ws": "^8.20.1"
+    "ws": "^8.20.1",
+    "zenitel-client": "^0.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",

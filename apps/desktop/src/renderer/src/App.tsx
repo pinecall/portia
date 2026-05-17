@@ -517,41 +517,44 @@ function IntercomSettings({ online }: { online: boolean }) {
   return (
     <>
       <div className="info-section">
-        <h2><Volume2 size={16} style={{ marginRight: 6 }} /> Speaker</h2>
+        <h2><Volume2 size={16} style={{ marginRight: 6 }} /> Speaker Output</h2>
+        <p className="settings-hint" style={{ marginBottom: 10 }}>Controls the playback volume of the AI agent's voice through the intercom speaker.</p>
         <div className="audio-slider">
-          <label className="info-label">Volume ({audio.speaker.gain} dB)</label>
+          <label className="info-label">Gain — {audio.speaker.gain > 0 ? '+' : ''}{audio.speaker.gain} dB</label>
           <div className="slider-row">
             <span className="slider-min">-10</span>
             <input type="range" min={-10} max={13} value={audio.speaker.gain} onChange={e => updateSpeaker(Number(e.target.value))} />
             <span className="slider-max">+13</span>
           </div>
-          <p className="settings-hint">How loud the AI agent sounds at the intercom. Current: {audio.speaker.gain} dB</p>
+          <p className="settings-hint">Recommended: 0 to +3 dB. Higher values may distort in enclosed spaces.</p>
         </div>
       </div>
 
       <div className="info-section">
-        <h2><Mic size={16} style={{ marginRight: 6 }} /> Microphone</h2>
+        <h2><Mic size={16} style={{ marginRight: 6 }} /> Microphone Input</h2>
+        <p className="settings-hint" style={{ marginBottom: 10 }}>Controls how sensitive the microphone is when capturing visitor speech for voice recognition.</p>
         <div className="audio-slider">
-          <label className="info-label">Sensitivity ({audio.mic.gain} dB)</label>
+          <label className="info-label">Gain — {audio.mic.gain > 0 ? '+' : ''}{audio.mic.gain} dB</label>
           <div className="slider-row">
             <span className="slider-min">-10</span>
             <input type="range" min={-10} max={10} value={audio.mic.gain} onChange={e => updateMic(Number(e.target.value))} />
             <span className="slider-max">+10</span>
           </div>
-          <p className="settings-hint">Mic sensitivity for voice recognition. Higher = picks up softer speech.</p>
+          <p className="settings-hint">Recommended: +3 dB. Increase if the agent asks visitors to repeat themselves often.</p>
         </div>
       </div>
 
       <div className="info-section">
-        <h2>Audio Processing</h2>
+        <h2>Signal Processing</h2>
+        <p className="settings-hint" style={{ marginBottom: 10 }}>Hardware DSP features that improve audio quality for AI voice recognition.</p>
         <div className="audio-toggles">
-          <AudioToggle label="Echo Cancellation (AEC)" desc="Prevents the agent from hearing its own voice" enabled={audio.aec.enabled} onChange={v => toggleDsp('aec', v)} />
-          <AudioToggle label="Noise Cancellation (ANC)" desc="Filters traffic, wind, and ambient noise" enabled={audio.anc.enabled} onChange={v => toggleDsp('anc', v)} />
-          <AudioToggle label="Volume Compression (DRC)" desc="Normalizes volume — loud and soft speech at same level" enabled={audio.drc.enabled} onChange={v => toggleDsp('drc', v)} />
-          <AudioToggle label="Auto Volume (AVC)" desc="Adjusts speaker volume based on ambient noise" enabled={audio.avc.enabled} onChange={v => toggleAvc(v)} />
+          <AudioToggle label="Echo Cancellation" desc="Removes the agent's own voice from the mic feed, preventing feedback loops. Keep enabled." enabled={audio.aec.enabled} onChange={v => toggleDsp('aec', v)} />
+          <AudioToggle label="Noise Suppression" desc="Filters out ambient noise — traffic, wind, HVAC. Improves speech-to-text accuracy." enabled={audio.anc.enabled} onChange={v => toggleDsp('anc', v)} />
+          <AudioToggle label="Dynamic Compression" desc="Equalizes volume levels so quiet and loud voices are heard at the same level." enabled={audio.drc.enabled} onChange={v => toggleDsp('drc', v)} />
+          <AudioToggle label="Auto Volume" desc="Automatically adjusts speaker volume based on ambient noise. Useful for outdoor intercoms." enabled={audio.avc.enabled} onChange={v => toggleAvc(v)} />
         </div>
       </div>
-      {saving && <div className="audio-saving"><Spinner size={12} className="spin" /> Saving...</div>}
+      {saving && <div className="audio-saving"><Spinner size={12} className="spin" /> Applying changes...</div>}
     </>
   )
 }
