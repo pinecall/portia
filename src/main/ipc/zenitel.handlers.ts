@@ -46,10 +46,12 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const sipId = config.agentPhone || config.sipId || 'portia'
     const dakAddress = `${sipId}@${sipDomain}`
 
-    // 1. Configure SIP registrar domain + directory number on the intercom
+    // 1. Configure SIP registrar domain + directory number + auth on the intercom
     await z.setSIPConfig({
       domain: sipDomain,
       directoryNumber: sipId,
+      authUsername: ENV.SIP_AUTH_USER || undefined,
+      authPassword: ENV.SIP_AUTH_PASS || undefined,
     })
 
     // 2. Set DAK (call button) to dial the agent

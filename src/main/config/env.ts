@@ -18,6 +18,10 @@ export const ENV = {
   /** Twilio SIP domain for registration */
   SIP_DOMAIN: process.env.PORTIA_SIP_DOMAIN || 'testing-mo16m3gw.sip.twilio.com',
 
+  /** Twilio SIP registration credentials (from Credential List in Twilio console) */
+  SIP_AUTH_USER: process.env.PORTIA_SIP_AUTH_USER || '',
+  SIP_AUTH_PASS: process.env.PORTIA_SIP_AUTH_PASS || '',
+
   /** ElevenLabs voice ID */
   VOICE_ID: process.env.PORTIA_VOICE_ID || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
 
