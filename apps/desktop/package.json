@@ -18,8 +18,8 @@
     "electron-updater": "^6.3.0",
     "lucide-react": "^1.16.0",
     "sql.js": "^1.12.0",
-    "ws": "^8.20.1",
-    "tciv-client": "^0.0.1"
+    "tciv-client": "^0.0.1",
+    "ws": "^8.20.1"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
