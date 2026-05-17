@@ -107,7 +107,7 @@ export interface ProvisionConfig {
   sipDomain: string;
   /** SIP auth username (e.g. "zenitel01") */
   sipAuthUser: string;
-  /** SIP auth password (e.g. "Beachway1!Sip") */
+  /** SIP auth password */
   sipAuthPassword: string;
   /** Outbound proxy address. Defaults to sipDomain if omitted. */
   sipProxy?: string;

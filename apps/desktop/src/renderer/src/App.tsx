@@ -76,6 +76,8 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
   const [scanning, setScanning] = useState(false)
   const [devices, setDevices] = useState<any[]>([])
   const [host, setHost] = useState('')
+  const [user, setUser] = useState('')
+  const [pass, setPass] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
 
@@ -90,7 +92,11 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
 
   const testConnection = async () => {
     setTesting(true)
-    await window.portia.invoke('config:set', { zenitelHost: host })
+    await window.portia.invoke('config:set', {
+      zenitelHost: host,
+      zenitelUser: user || 'admin',
+      zenitelPassword: pass || 'alphaadmin',
+    })
     const result = await window.portia.invoke('zenitel:test')
     setTestResult(result)
     setTesting(false)
@@ -174,7 +180,18 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
 
         {step === 1 && (
           <div className="wizard-card">
-            <h2>Test connection to {host}</h2>
+            <h2>Connect to {host}</h2>
+            <div className="wizard-credentials">
+              <div className="wizard-field">
+                <label className="info-label">Username</label>
+                <input type="text" className="input" placeholder="admin" value={user} onChange={e => setUser(e.target.value)} />
+              </div>
+              <div className="wizard-field">
+                <label className="info-label">Password</label>
+                <input type="password" className="input" placeholder="alphaadmin" value={pass} onChange={e => setPass(e.target.value)} />
+              </div>
+            </div>
+            <p className="settings-hint" style={{ marginBottom: 8 }}>Leave blank to use defaults (admin / alphaadmin)</p>
             <button className="btn-primary" onClick={testConnection} disabled={testing}>
               {testing ? <><Loader2 size={16} className="spin" /> Testing...</> : <><Wifi size={16} /> Test Connection</>}
             </button>
@@ -183,7 +200,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
                 {testResult.reachable ? (
                   <><Check size={16} /><div><div>Connected — {testResult.model}</div><div className="test-detail">Webcall: {testResult.webcallEnabled ? 'Enabled' : 'Disabled'}</div></div></>
                 ) : (
-                  <><WifiOff size={16} /><div>Connection failed</div></>
+                  <><WifiOff size={16} /><div>Connection failed — check credentials</div></>
                 )}
               </div>
             )}

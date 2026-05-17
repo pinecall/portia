@@ -99,7 +99,7 @@ zenitel sip get -h 192.168.1.143
 #   Number:       zenitel01
 #   Domain:       testing-mo16m3gw.sip.twilio.com
 #   Auth User:    zenitel01
-#   Auth Pass:    Beachway1!Sip
+#   Auth Pass:    ••••••••
 #   Proxy:        testing-mo16m3gw.sip.twilio.com
 #   Transport:    UDP
 
@@ -180,7 +180,7 @@ Configures a **factory-reset** Zenitel in a single command. Sets SIP credentials
 zenitel provision -h 192.168.1.143 \
   --domain testing-mo16m3gw.sip.twilio.com \
   --sip-user zenitel01 \
-  --sip-pass 'Beachway1!Sip' \
+  --sip-pass 'your-sip-password' \
   --number portia-ae3c
 
 # 🔧 Provisioning 192.168.1.143 from factory reset...
@@ -312,7 +312,7 @@ const sip = await z.getSIPConfig();
 //   directoryNumber: 'zenitel01',
 //   domain: 'testing-mo16m3gw.sip.twilio.com',
 //   authUsername: 'zenitel01',
-//   authPassword: 'Beachway1!Sip',
+//   authPassword: '••••••••',
 //   outboundProxy: 'testing-mo16m3gw.sip.twilio.com',
 //   transport: 'UDP'
 // }
@@ -415,7 +415,7 @@ import type { ProvisionConfig } from '@pinecall/zenitel-client';
 await z.provisionDevice({
   sipDomain: 'testing-mo16m3gw.sip.twilio.com',
   sipAuthUser: 'zenitel01',
-  sipAuthPassword: 'Beachway1!Sip',
+  sipAuthPassword: 'your-sip-password',
   agentNumber: 'portia-ae3c',         // Call button will dial this
   // Optional:
   sipProxy: 'proxy.sip.twilio.com',   // Default: sipDomain

@@ -114,6 +114,9 @@ body {
 }
 .wizard-card h2 { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
 .wizard-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 4px; }
+.wizard-credentials { display: flex; gap: 10px; }
+.wizard-credentials .wizard-field { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.wizard-credentials .info-label { font-size: 11px; color: var(--ink-3); }
 
 /* Inputs */
 .input {
