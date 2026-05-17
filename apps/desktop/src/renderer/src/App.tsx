@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Search, Wifi, WifiOff, ChevronRight, ChevronLeft,
   Check, Loader2, Radio,
   LayoutDashboard, Users, Key, FileText, Camera, Settings,
   Shield, Clock, TrendingUp, DoorOpen, Activity,
-  RefreshCw, CircleDot, Phone, User, Building2, UserCheck
+  RefreshCw, CircleDot, Phone, User, Building2, UserCheck,
+  Volume2, Mic, ToggleLeft, ToggleRight, Loader2 as Spinner
 } from 'lucide-react'
 import { useZenitel } from './hooks/useZenitel'
 import { useAgent, useElapsed, STAGES } from './hooks/useAgent'
@@ -353,6 +354,7 @@ function DashboardPage({ zenitel, config }: any) {
 function SettingsPage({ config, zenitel }: any) {
   const [apiKey, setApiKey] = useState(config.pinecallApiKey || '')
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<'general' | 'intercom'>('general')
 
   const resetWizard = async () => {
     await window.portia.invoke('config:reset-wizard')
@@ -367,52 +369,184 @@ function SettingsPage({ config, zenitel }: any) {
   return (
     <div className="page">
       <h1>Settings</h1>
-      <div className="info-section">
-        <h2>Connection</h2>
-        <div className="info-grid">
-          <InfoRow label="Zenitel IP" value={config.zenitelHost} />
-          <InfoRow label="Username" value={config.zenitelUser || 'admin'} />
-          <InfoRow label="SIP ID" value={config.sipId} />
-          <InfoRow label="Status" value={zenitel.online ? 'Connected' : 'Disconnected'} status={zenitel.online ? 'ok' : 'warn'} />
-        </div>
-      </div>
-      <div className="info-section">
-        <h2>Agent</h2>
-        <div className="settings-field">
-          <label className="info-label">API Key</label>
-          {editing ? (
-            <div className="settings-input-row">
-              <input
-                className="input"
-                type="text"
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && saveApiKey()}
-                placeholder="pk_..."
-                autoFocus
-              />
-              <button className="btn-primary" onClick={saveApiKey}>Save</button>
-              <button className="btn-ghost" onClick={() => { setApiKey(config.pinecallApiKey || ''); setEditing(false) }}>Cancel</button>
-            </div>
-          ) : (
-            <div className="settings-input-row">
-              <span className="info-value">{config.pinecallApiKey ? '••••' + config.pinecallApiKey.slice(-6) : 'Not set'}</span>
-              <button className="btn-ghost" onClick={() => setEditing(true)}>Edit</button>
-            </div>
-          )}
-        </div>
-        <div className="info-grid" style={{ marginTop: 8 }}>
-          <InfoRow label="Phone Channel" value={config.agentPhone || config.sipId} />
-          <InfoRow label="Building" value={config.buildingName || 'Not set'} />
-        </div>
-      </div>
-      <div className="info-section">
-        <h2>Device</h2>
-        <button className="btn-danger" onClick={resetWizard}>
-          Reset Setup
+      <div className="settings-tabs">
+        <button className={`settings-tab ${tab === 'general' ? 'active' : ''}`} onClick={() => setTab('general')}>
+          <Settings size={14} /> General
         </button>
-        <p className="settings-hint">Re-run the setup wizard to connect a different intercom.</p>
+        <button className={`settings-tab ${tab === 'intercom' ? 'active' : ''}`} onClick={() => setTab('intercom')}>
+          <Volume2 size={14} /> Intercom
+        </button>
       </div>
+
+      {tab === 'general' && (
+        <>
+          <div className="info-section">
+            <h2>Connection</h2>
+            <div className="info-grid">
+              <InfoRow label="Zenitel IP" value={config.zenitelHost} />
+              <InfoRow label="Username" value={config.zenitelUser || 'admin'} />
+              <InfoRow label="SIP ID" value={config.sipId} />
+              <InfoRow label="Status" value={zenitel.online ? 'Connected' : 'Disconnected'} status={zenitel.online ? 'ok' : 'warn'} />
+            </div>
+          </div>
+          <div className="info-section">
+            <h2>Agent</h2>
+            <div className="settings-field">
+              <label className="info-label">API Key</label>
+              {editing ? (
+                <div className="settings-input-row">
+                  <input
+                    className="input"
+                    type="text"
+                    value={apiKey}
+                    onChange={e => setApiKey(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && saveApiKey()}
+                    placeholder="pk_..."
+                    autoFocus
+                  />
+                  <button className="btn-primary" onClick={saveApiKey}>Save</button>
+                  <button className="btn-ghost" onClick={() => { setApiKey(config.pinecallApiKey || ''); setEditing(false) }}>Cancel</button>
+                </div>
+              ) : (
+                <div className="settings-input-row">
+                  <span className="info-value">{config.pinecallApiKey ? '••••' + config.pinecallApiKey.slice(-6) : 'Not set'}</span>
+                  <button className="btn-ghost" onClick={() => setEditing(true)}>Edit</button>
+                </div>
+              )}
+            </div>
+            <div className="info-grid" style={{ marginTop: 8 }}>
+              <InfoRow label="Phone Channel" value={config.agentPhone || config.sipId} />
+              <InfoRow label="Building" value={config.buildingName || 'Not set'} />
+            </div>
+          </div>
+          <div className="info-section">
+            <h2>Device</h2>
+            <button className="btn-danger" onClick={resetWizard}>
+              Reset Setup
+            </button>
+            <p className="settings-hint">Re-run the setup wizard to connect a different intercom.</p>
+          </div>
+        </>
+      )}
+
+      {tab === 'intercom' && <IntercomSettings online={zenitel.online} />}
+    </div>
+  )
+}
+
+// ── Intercom Audio Settings ──────────────────────────────────────────────
+
+function IntercomSettings({ online }: { online: boolean }) {
+  const [audio, setAudio] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const saveTimer = useRef<any>(null)
+
+  const loadSettings = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const settings = await window.portia.invoke('zenitel:audio:get')
+      setAudio(settings)
+    } catch (err: any) {
+      setError(err.message || 'Failed to load audio settings')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { if (online) loadSettings() }, [online, loadSettings])
+
+  const save = useCallback(async (partial: any) => {
+    setSaving(true)
+    try {
+      await window.portia.invoke('zenitel:audio:set', partial)
+    } catch (err: any) {
+      setError(err.message || 'Failed to save')
+    }
+    setSaving(false)
+  }, [])
+
+  const debouncedSave = useCallback((partial: any) => {
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => save(partial), 600)
+  }, [save])
+
+  const updateSpeaker = (gain: number) => {
+    setAudio((a: any) => ({ ...a, speaker: { ...a.speaker, gain } }))
+    debouncedSave({ speaker: { gain } })
+  }
+
+  const updateMic = (gain: number) => {
+    setAudio((a: any) => ({ ...a, mic: { ...a.mic, gain } }))
+    debouncedSave({ mic: { gain } })
+  }
+
+  const toggleDsp = (key: 'aec' | 'anc' | 'drc', enabled: boolean) => {
+    setAudio((a: any) => ({ ...a, [key]: { ...a[key], enabled } }))
+    save({ [key]: { enabled } })
+  }
+
+  const toggleAvc = (enabled: boolean) => {
+    setAudio((a: any) => ({ ...a, avc: { ...a.avc, enabled } }))
+    save({ avc: { enabled } })
+  }
+
+  if (!online) return <div className="info-section"><p className="settings-hint">Intercom is offline. Connect to configure audio.</p></div>
+  if (loading) return <div className="info-section"><Loader2 size={20} className="spin" /> Loading audio settings...</div>
+  if (error) return <div className="info-section"><p className="settings-hint" style={{ color: 'var(--red)' }}>{error}</p><button className="btn-ghost" onClick={loadSettings}><RefreshCw size={14} /> Retry</button></div>
+  if (!audio) return null
+
+  return (
+    <>
+      <div className="info-section">
+        <h2><Volume2 size={16} style={{ marginRight: 6 }} /> Speaker</h2>
+        <div className="audio-slider">
+          <label className="info-label">Volume ({audio.speaker.gain} dB)</label>
+          <div className="slider-row">
+            <span className="slider-min">-10</span>
+            <input type="range" min={-10} max={13} value={audio.speaker.gain} onChange={e => updateSpeaker(Number(e.target.value))} />
+            <span className="slider-max">+13</span>
+          </div>
+          <p className="settings-hint">How loud the AI agent sounds at the intercom. Current: {audio.speaker.gain} dB</p>
+        </div>
+      </div>
+
+      <div className="info-section">
+        <h2><Mic size={16} style={{ marginRight: 6 }} /> Microphone</h2>
+        <div className="audio-slider">
+          <label className="info-label">Sensitivity ({audio.mic.gain} dB)</label>
+          <div className="slider-row">
+            <span className="slider-min">-10</span>
+            <input type="range" min={-10} max={10} value={audio.mic.gain} onChange={e => updateMic(Number(e.target.value))} />
+            <span className="slider-max">+10</span>
+          </div>
+          <p className="settings-hint">Mic sensitivity for voice recognition. Higher = picks up softer speech.</p>
+        </div>
+      </div>
+
+      <div className="info-section">
+        <h2>Audio Processing</h2>
+        <div className="audio-toggles">
+          <AudioToggle label="Echo Cancellation (AEC)" desc="Prevents the agent from hearing its own voice" enabled={audio.aec.enabled} onChange={v => toggleDsp('aec', v)} />
+          <AudioToggle label="Noise Cancellation (ANC)" desc="Filters traffic, wind, and ambient noise" enabled={audio.anc.enabled} onChange={v => toggleDsp('anc', v)} />
+          <AudioToggle label="Volume Compression (DRC)" desc="Normalizes volume — loud and soft speech at same level" enabled={audio.drc.enabled} onChange={v => toggleDsp('drc', v)} />
+          <AudioToggle label="Auto Volume (AVC)" desc="Adjusts speaker volume based on ambient noise" enabled={audio.avc.enabled} onChange={v => toggleAvc(v)} />
+        </div>
+      </div>
+      {saving && <div className="audio-saving"><Spinner size={12} className="spin" /> Saving...</div>}
+    </>
+  )
+}
+
+function AudioToggle({ label, desc, enabled, onChange }: { label: string; desc: string; enabled: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="audio-toggle" onClick={() => onChange(!enabled)}>
+      <div className="audio-toggle-info">
+        <span className="audio-toggle-label">{label}</span>
+        <span className="audio-toggle-desc">{desc}</span>
+      </div>
+      {enabled ? <ToggleRight size={28} className="toggle-on" /> : <ToggleLeft size={28} className="toggle-off" />}
     </div>
   )
 }

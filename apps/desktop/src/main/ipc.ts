@@ -79,6 +79,14 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
     return `portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser}&pass=${config.zenitelPassword}`
   })
 
+  ipcMain.handle('zenitel:audio:get', async () => {
+    return _client(db.getConfig()).getAudioSettings()
+  })
+
+  ipcMain.handle('zenitel:audio:set', async (_, settings: any) => {
+    await _client(db.getConfig()).setAudioSettings(settings)
+  })
+
   // ── Database ──────────────────────────────────────────────────────────
 
   // Helper: refresh agent keyterms after DB mutations
