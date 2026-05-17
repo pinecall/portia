@@ -81,14 +81,13 @@ export function getAgentStatus(): { running: boolean } {
 export function refreshKeyterms(): void {
   if (!agentState) return
   try {
-    // Dynamic import to avoid circular dependency
-    const { buildKeyterms } = require('./index')
+    const { buildKeyterms } = require('./keyterms')
     const keyterms = buildKeyterms(agentState.db)
     agentState.agent.configure({
       stt: { provider: 'deepgram-flux', keyterms },
     })
-    console.log(`[Agent] Keyterms refreshed: ${keyterms.length} terms`)
+    console.log(`[agent] Keyterms refreshed: ${keyterms.length} terms`)
   } catch (err: any) {
-    console.error(`[Agent] Failed to refresh keyterms:`, err.message)
+    console.error(`[agent] Failed to refresh keyterms:`, err.message)
   }
 }
