@@ -2,8 +2,8 @@
 # Portia — dev runner (start / stop / restart)
 # Usage: ./portia [start|stop|restart]
 
-DIR="$(cd "$(dirname "$0")/apps/desktop" && pwd)"
-NAME="portia-desktop"
+DIR="$(cd "$(dirname "$0")" && pwd)"
+NAME="portia"
 
 stop_portia() {
   pkill -f "electron-vite dev" 2>/dev/null
