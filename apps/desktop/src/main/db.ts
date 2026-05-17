@@ -212,6 +212,19 @@ export class PortiaDB {
   getAccessCodes() { return this._all('SELECT * FROM access_codes WHERE active = 1') }
   getAllAccessCodes() { return this._all('SELECT * FROM access_codes') }
 
+  /** Fuzzy-search team members by name (case-insensitive partial match). */
+  findTeamByName(name: string): any[] {
+    return this._all('SELECT * FROM team WHERE LOWER(name) LIKE LOWER(?)', [`%${name}%`])
+  }
+
+  /** Find active access codes assigned to a visitor name (fuzzy). */
+  findCodesByVisitor(visitorName: string): any[] {
+    return this._all(
+      'SELECT * FROM access_codes WHERE active = 1 AND LOWER(visitor_name) LIKE LOWER(?)',
+      [`%${visitorName}%`],
+    )
+  }
+
   validateCode(code: string) {
     const normalized = code.replace(/\D/g, '').trim()
     const entry = this._get('SELECT * FROM access_codes WHERE code = ? AND active = 1', [normalized])

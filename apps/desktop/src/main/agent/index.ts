@@ -54,8 +54,54 @@ interface PortiaAgentOptions {
 function buildToolHandlers(db: PortiaDB, zenitel: ZenitelClient) {
   return {
     identifyVisitor: async (params: any, _call: Call) => {
-      console.log(`[Tool] identifyVisitor: name=${params.name || '—'} company=${params.company || '—'} host=${params.host || '—'}`)
-      return { updated: true, ...params }
+      const name = params.name || ''
+      const company = params.company || ''
+      const host = params.host || ''
+      console.log(`[Tool] identifyVisitor: name=${name || '—'} company=${company || '—'} host=${host || '—'}`)
+
+      const result: Record<string, any> = { updated: true, name, company, host }
+
+      // ── Check if visitor has an active access code ──
+      if (name) {
+        const codes = db.findCodesByVisitor(name)
+        if (codes.length > 0) {
+          result.knownVisitor = true
+          result.assignedTo = codes.map((c: any) => c.assigned_to).filter(Boolean)
+          console.log(`[Tool] Known visitor: ${name} — codes assigned to: ${result.assignedTo.join(', ')}`)
+        } else {
+          result.knownVisitor = false
+        }
+
+        // Check past visits
+        const pastVisits = db.lookupVisitor({ name })
+        if (pastVisits.length > 0) {
+          result.previousVisits = pastVisits.length
+          result.lastVisit = pastVisits[0].date
+          result.lastOutcome = pastVisits[0].outcome
+        }
+      }
+
+      // ── Validate host exists in team directory ──
+      if (host) {
+        const matches = db.findTeamByName(host)
+        if (matches.length > 0) {
+          const m = matches[0]
+          result.hostFound = true
+          result.hostId = m.id
+          result.hostName = m.name
+          result.hostStatus = m.status
+          result.hostFloor = m.floor
+          console.log(`[Tool] Host found: ${m.name} (${m.id}) — status: ${m.status}, floor: ${m.floor}`)
+        } else {
+          result.hostFound = false
+          // Suggest available team members
+          const team = db.getTeam()
+          result.availableHosts = team.map((m: any) => m.name)
+          console.log(`[Tool] Host NOT found: "${host}" — team: ${result.availableHosts.join(', ')}`)
+        }
+      }
+
+      return result
     },
 
     openDoor: async (params: any, call: Call) => {
