@@ -7,8 +7,9 @@
 
 import type { PortiaDB } from '../db'
 import type { BrowserWindow } from 'electron'
+import type { Agent } from '@pinecall/core'
 
-let agentState: { disconnect: () => Promise<void> } | null = null
+let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 
 interface BootstrapOptions {
   db: PortiaDB
@@ -53,7 +54,7 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
       },
     })
 
-    agentState = result
+    agentState = { agent: result.agent, db, disconnect: result.disconnect }
     console.log(`[Agent] Started — SIP: ${sipUri}`)
     window.webContents.send('portia:agent-status', { status: 'connected', sipUri })
     return true
@@ -75,4 +76,23 @@ export async function stopAgent(): Promise<void> {
 
 export function getAgentStatus(): { running: boolean } {
   return { running: !!agentState }
+}
+
+/**
+ * Rebuild keyterms from the database and push to the live agent.
+ * Call this after any DB mutation that changes team/codes/visitors.
+ */
+export function refreshKeyterms(): void {
+  if (!agentState) return
+  try {
+    // Dynamic import to avoid circular dependency
+    const { buildKeyterms } = require('./index')
+    const keyterms = buildKeyterms(agentState.db)
+    agentState.agent.configure({
+      stt: { provider: 'deepgram-flux', keyterms },
+    })
+    console.log(`[Agent] Keyterms refreshed: ${keyterms.length} terms`)
+  } catch (err: any) {
+    console.error(`[Agent] Failed to refresh keyterms:`, err.message)
+  }
 }

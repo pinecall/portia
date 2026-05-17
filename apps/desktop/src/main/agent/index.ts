@@ -131,6 +131,56 @@ function toolDefsToServerTools() {
   }))
 }
 
+// ── Build keyterms ───────────────────────────────────────────────────────
+
+/**
+ * Extract keyterms from the database to boost Deepgram STT recognition.
+ * Includes: team member names, access code visitor names, building name,
+ * and recent visitor names/companies.
+ */
+export function buildKeyterms(db: PortiaDB): string[] {
+  const terms = new Set<string>()
+
+  // Building name
+  const config = db.getConfig()
+  if (config.buildingName) terms.add(config.buildingName)
+
+  // Team member names
+  for (const m of db.getTeam()) {
+    if ((m as any).name) terms.add((m as any).name)
+  }
+
+  // Access code visitor names
+  for (const c of db.getAccessCodes()) {
+    if ((c as any).visitor_name) terms.add((c as any).visitor_name)
+    if ((c as any).assigned_to) terms.add((c as any).assigned_to)
+  }
+
+  // Recent visitor names & companies (last 50)
+  for (const v of db.getVisits(50)) {
+    if ((v as any).visitor_name && (v as any).visitor_name !== 'Unknown visitor') {
+      terms.add((v as any).visitor_name)
+    }
+    if ((v as any).company) terms.add((v as any).company)
+  }
+
+  // Filter per Deepgram best practices:
+  // - Skip short strings (< 2 chars)
+  // - Skip internal IDs (T001, AC3f2b, etc.)
+  // - Skip generic placeholders (Visitante #4127, Demo Visitante)
+  // - Skip pure numbers or special-char-heavy strings
+  const result = [...terms].filter(t => {
+    if (!t || t.length < 2) return false
+    if (/^[A-Z]{1,3}\d{2,}$/i.test(t)) return false        // IDs like T001, AC3f2b
+    if (/^(Demo|Unknown|Visitante)\b/i.test(t)) return false // generic placeholders
+    if (/^[\d#·\-\s]+$/.test(t)) return false                // pure numbers/symbols
+    return true
+  })
+
+  console.log(`[Portia] Keyterms: ${result.length} terms — ${result.join(', ')}`)
+  return result
+}
+
 // ── Build prompt ─────────────────────────────────────────────────────────
 
 function buildPrompt(db: PortiaDB): string {
@@ -171,11 +221,15 @@ export async function createAgent(opts: PortiaAgentOptions) {
   console.log(`[Portia Agent] Prompt: ${prompt.length} chars`)
   console.log(`[Portia Agent] Phone: ${opts.sipUri}`)
 
+  // Build keyterms from DB for better STT name recognition
+  const keyterms = buildKeyterms(opts.db)
+  const sttConfig = { provider: 'deepgram-flux', keyterms }
+
   // Create agent with server-side LLM, tools, and greeting
   const agent = pc.agent(agentId, {
     voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
     language: opts.language || 'es',
-    stt: 'deepgram-flux',
+    stt: sttConfig,
     turnDetection: 'native',
     llm: {
       engine: 'openai',
@@ -191,7 +245,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
   agent.addChannel('phone', opts.sipUri, {
     voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
     language: opts.language || 'es',
-    stt: 'deepgram-flux',
+    stt: sttConfig,
     turnDetection: 'native',
   })
 
@@ -379,65 +433,67 @@ REGLA ABSOLUTA: Haz UNA sola pregunta por turno. NO combines preguntas. Espera r
 
 ### PASO 1: NOMBRE
 Tu primer mensaje ya pregunta el nombre ("¿Cuál es su nombre?").
-→ Cuando el visitante diga su nombre, INMEDIATAMENTE llama identifyVisitor(name: "[nombre]").
-→ NO hagas otra pregunta hasta que hayas llamado a identifyVisitor.
+→ Cuando el visitante diga su nombre, INMEDIATAMENTE registra el nombre.
+→ NO hagas otra pregunta hasta que hayas registrado el dato.
 
 ### PASO 2: EMPRESA
-Después de llamar a identifyVisitor con el nombre, pregunta SOLO la empresa:
+Después de registrar el nombre, pregunta SOLO la empresa:
 "Encantado/a, [nombre]. ¿De qué empresa viene?"
 → Si dice que no viene de empresa, acepta y continúa.
-→ Llama a identifyVisitor(name: "[nombre]", company: "[empresa]").
+→ Registra el nombre y la empresa.
 
 ### PASO 3: ¿CON QUIÉN TIENE CITA?
 Después de saber la empresa, pregunta SOLO con quién tiene cita:
 "¿Con qué persona de {{building}} tiene cita?"
 → Identifica al comercial. Si no coincide con ninguno, ofrece la lista.
-→ Llama a identifyVisitor(name: "[nombre]", company: "[empresa]", host: "[comercial]").
+→ Registra el nombre, la empresa y el contacto.
 
 ### PASO 4: CÓDIGO DE ACCESO
 Solicita SOLO el código:
 "Perfecto. Para completar la verificación, ¿me facilita su código de acceso de cinco dígitos?"
-→ Cuando el visitante dé el código, llama a openDoor(code: "[código]").
+→ Cuando el visitante dé el código, valida el acceso.
 
 ### PASO 5: RESULTADO
-Si openDoor devuelve success=true:
+Si el acceso es validado con éxito:
 "La puerta está abierta, pase por favor. Diríjase a la sala de espera. Le atenderán enseguida. ¡Bienvenido!"
 
-Si openDoor devuelve success=false:
+Si el acceso es denegado:
 "El código no es válido. ¿Podría verificarlo e intentarlo de nuevo?"
 → Máximo 2 intentos. Después: "Le sugiero que contacte directamente con la persona con quien tiene cita para obtener el código correcto."
 
 ## USO DE HERRAMIENTAS — CRÍTICO
 
-### identifyVisitor — LLAMAR INMEDIATAMENTE
-CADA VEZ que obtengas un dato nuevo del visitante, DEBES llamar a identifyVisitor ANTES de responder al visitante.
+### REGLA DE ORO: PRIMERO HABLA, LUEGO LLAMA A LA HERRAMIENTA
+Esto es un canal de voz. El visitante oye SOLO tu texto. Si llamas a una herramienta sin texto, hay silencio total.
+En cada turno donde necesites una herramienta, tu respuesta SIEMPRE debe tener PRIMERO el texto hablado y DESPUÉS la llamada a la herramienta.
+NUNCA generes una llamada a herramienta sin haber escrito texto antes en el mismo turno.
+NUNCA escribas el nombre de una función ni sus parámetros como parte de tu texto hablado.
+Las herramientas se invocan mediante el mecanismo de function calling de la API, NUNCA escribiéndolas como texto.
+
+### Registrar datos del visitante
+CADA VEZ que el visitante te dé un dato nuevo (nombre, empresa, persona con quien tiene cita), DEBES usar la herramienta de identificación para registrarlo.
 Es OBLIGATORIO. La credencial del visitante en pantalla se actualiza con cada llamada.
+INCLUYE SIEMPRE todos los campos que ya conoces más el nuevo dato.
+Un solo registro por turno.
 
-- Visitante dice su nombre → identifyVisitor(name: "[nombre]") → luego responder preguntando empresa
-- Visitante dice su empresa → identifyVisitor(name, company) → luego responder preguntando cita
-- Visitante dice con quién tiene cita → identifyVisitor(name, company, host) → luego responder pidiendo código
-
-INCLUYE SIEMPRE todos los campos que ya conoces más el nuevo.
-NUNCA juntes dos identifyVisitor en la misma llamada. Uno por turno.
-
-### openDoor — OBLIGATORIO
-NUNCA intentes verificar un código tú misma — SIEMPRE usa openDoor.
+### Abrir puerta
+NUNCA intentes verificar un código tú misma. SIEMPRE usa la herramienta de apertura de puerta.
 La herramienta valida el código Y abre la puerta automáticamente.
 
-### Otras herramientas
-- Si el visitante se pone agresivo o hay una situación de seguridad, usa escalateToSecurity.
-- Si necesitas avisar al miembro del equipo, usa contactTeamMember.
-- Si quieres comprobar si el visitante ha venido antes, usa lookupVisitor.
+### Otras acciones disponibles
+- Si el visitante se pone agresivo o hay una situación de seguridad, escala a seguridad.
+- Si necesitas avisar al miembro del equipo, contacta al miembro del equipo.
+- Si quieres comprobar si el visitante ha venido antes, busca al visitante.
 
 ## REGLAS IMPORTANTES
 
 - Habla SIEMPRE en español.
 - Sé amable pero profesional y concisa.
-- NUNCA abras la puerta sin usar la herramienta openDoor.
+- NUNCA abras la puerta sin usar la herramienta de apertura.
 - NUNCA reveles códigos de acceso ni des pistas sobre ellos.
 - Si el visitante no tiene cita, ofrécete a tomar un mensaje.
 - Máximo 2 intentos de código. Después, sugiere contactar con su persona de contacto.
-- Si el visitante da varios datos a la vez (ej: nombre + empresa), llama a identifyVisitor con todos los datos que tengas y luego pregunta el siguiente dato que falte.
+- Si el visitante da varios datos a la vez (ej: nombre y empresa), registra todos los datos que tengas y luego pregunta el siguiente dato que falte.
 
 ## FORMATO DE RESPUESTAS — CANAL DE VOZ
 
