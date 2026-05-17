@@ -5,7 +5,7 @@
  */
 
 import { BrowserWindow } from 'electron'
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 import { registerZenitelHandlers } from './zenitel.handlers'
 import { registerDbHandlers } from './db.handlers'
 import { registerConfigHandlers } from './config.handlers'

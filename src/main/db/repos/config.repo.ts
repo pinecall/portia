@@ -2,8 +2,8 @@
  * Config repository — key-value store for app configuration.
  */
 
-import type { AppConfig } from '../../../shared/domain'
-import { queryAll, run } from '../connection'
+import type { AppConfig } from '@shared/domain'
+import { queryAll, run } from '@main/db/connection'
 
 const CONFIG_DEFAULTS: AppConfig = {
   zenitelHost: '',

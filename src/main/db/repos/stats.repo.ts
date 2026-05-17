@@ -2,8 +2,8 @@
  * Stats repository — dashboard aggregates.
  */
 
-import type { DashboardStats } from '../../../shared/domain'
-import { queryAll, queryOne } from '../connection'
+import type { DashboardStats } from '@shared/domain'
+import { queryAll, queryOne } from '@main/db/connection'
 
 export function getDashboardStats(): DashboardStats {
   const today = new Date().toISOString().split('T')[0]

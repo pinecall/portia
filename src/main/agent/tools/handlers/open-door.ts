@@ -1,5 +1,5 @@
-import type { ToolHandler } from '../types'
-import { ENV } from '../../../config/env'
+import type { ToolHandler } from '@main/agent/tools/types'
+import { ENV } from '@main/config/env'
 
 interface OpenDoorArgs { code?: string }
 

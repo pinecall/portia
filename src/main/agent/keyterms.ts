@@ -5,7 +5,7 @@
  * building name, and access code assignees.
  */
 
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 
 export function buildKeyterms(db: PortiaDB): string[] {
   const terms = new Set<string>()

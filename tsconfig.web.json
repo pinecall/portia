@@ -12,7 +12,10 @@
     "outDir": "./out",
     "rootDir": "./src/renderer/src",
     "baseUrl": ".",
-    "paths": { "@/*": ["src/renderer/src/*"] }
+    "paths": {
+      "@ui/*": ["src/renderer/src/*"],
+      "@shared/*": ["src/shared/*"]
+    }
   },
-  "include": ["src/renderer/src/**/*"]
+  "include": ["src/renderer/src/**/*", "src/shared/**/*"]
 }

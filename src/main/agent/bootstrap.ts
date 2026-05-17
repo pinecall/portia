@@ -5,10 +5,10 @@
  * Called after the wizard completes or on app start if already configured.
  */
 
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/core'
-import { ENV } from '../config/env'
+import { ENV } from '@main/config/env'
 
 let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 

@@ -19,7 +19,7 @@ import * as escalationsRepo from './repos/escalations.repo'
 import * as statsRepo from './repos/stats.repo'
 
 // Re-export types
-export type { AppConfig } from '../../shared/domain'
+export type { AppConfig } from '@shared/domain'
 
 export class PortiaDB {
   private constructor() {}

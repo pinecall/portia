@@ -3,8 +3,8 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron'
-import type { PortiaDB } from '../db'
-import { ENV } from '../config/env'
+import type { PortiaDB } from '@main/db'
+import { ENV } from '@main/config/env'
 
 const SERVER_URL = 'https://voice.pinecall.io'
 
@@ -17,7 +17,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     db.updateConfig({ wizardCompleted: true })
     window.webContents.send('portia:wizard-done')
     try {
-      const { startAgent } = await import('../agent/bootstrap')
+      const { startAgent } = await import('@main/agent/bootstrap')
       await startAgent({ db, window })
     } catch (err: any) {
       console.error('[ipc] Failed to start agent after wizard:', err.message)
@@ -27,7 +27,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('config:reset-wizard', async () => {
     try {
-      const { stopAgent } = await import('../agent/bootstrap')
+      const { stopAgent } = await import('@main/agent/bootstrap')
       await stopAgent()
     } catch {}
     db.updateConfig({ wizardCompleted: false, agentId: null })
@@ -37,19 +37,19 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
   // ── Agent ──────────────────────────────────────────────────────────────
 
   ipcMain.handle('agent:start', async () => {
-    const { startAgent } = await import('../agent/bootstrap')
+    const { startAgent } = await import('@main/agent/bootstrap')
     return startAgent({ db, window })
   })
 
   ipcMain.handle('agent:stop', async () => {
-    const { stopAgent } = await import('../agent/bootstrap')
+    const { stopAgent } = await import('@main/agent/bootstrap')
     await stopAgent()
     return true
   })
 
   ipcMain.handle('agent:status', async () => {
     try {
-      const { getAgentStatus } = await import('../agent/bootstrap')
+      const { getAgentStatus } = await import('@main/agent/bootstrap')
       return getAgentStatus()
     } catch {
       return { running: false }

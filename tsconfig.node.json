@@ -10,7 +10,12 @@
     "composite": true,
     "outDir": "./out",
     "rootDir": "./src/main",
+    "baseUrl": ".",
+    "paths": {
+      "@main/*": ["src/main/*"],
+      "@shared/*": ["src/shared/*"]
+    },
     "types": ["node"]
   },
-  "include": ["src/main/**/*", "src/preload/**/*"]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*"]
 }

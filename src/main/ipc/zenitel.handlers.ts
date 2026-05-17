@@ -4,8 +4,8 @@
 
 import { ipcMain } from 'electron'
 import { TcivClient, scanNetwork } from 'tciv-client'
-import type { PortiaDB } from '../db'
-import { ENV } from '../config/env'
+import type { PortiaDB } from '@main/db'
+import { ENV } from '@main/config/env'
 
 export function registerZenitelHandlers(db: PortiaDB) {
   const _client = (config: { zenitelHost: string; zenitelUser: string; zenitelPassword: string }) =>

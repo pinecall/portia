@@ -1,4 +1,4 @@
-import type { ToolHandler } from '../types'
+import type { ToolHandler } from '@main/agent/tools/types'
 
 interface EscalateArgs { reason: string; urgency: string }
 

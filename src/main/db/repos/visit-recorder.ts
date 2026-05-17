@@ -6,7 +6,7 @@
  */
 
 import type { Call } from '@pinecall/core'
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 
 export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
   try {

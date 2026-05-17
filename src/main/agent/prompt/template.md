@@ -108,3 +108,7 @@ La herramienta valida el código Y abre la puerta automáticamente.
   - "planta segunda", NO "2ª planta"
 - Oraciones cortas y naturales, como si hablaras por interfono.
 - Sin listas. Todo en prosa conversacional.
+
+## {{team}}
+
+## {{codes}}

@@ -2,8 +2,8 @@
  * Team repository — CRUD for team members.
  */
 
-import type { TeamMember, TeamMemberInput } from '../../../shared/domain'
-import { queryAll, queryOne, run } from '../connection'
+import type { TeamMember, TeamMemberInput } from '@shared/domain'
+import { queryAll, queryOne, run } from '@main/db/connection'
 
 export function getTeam(): TeamMember[] {
   return queryAll('SELECT * FROM team') as unknown as TeamMember[]

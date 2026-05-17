@@ -2,8 +2,8 @@
  * Visits repository.
  */
 
-import type { Visit, VisitInput } from '../../../shared/domain'
-import { queryAll, run } from '../connection'
+import type { Visit, VisitInput } from '@shared/domain'
+import { queryAll, run } from '@main/db/connection'
 
 export function getVisits(limit = 50): Visit[] {
   return queryAll('SELECT * FROM visits ORDER BY date DESC LIMIT ?', [limit]) as unknown as Visit[]

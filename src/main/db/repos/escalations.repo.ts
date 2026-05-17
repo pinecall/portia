@@ -2,8 +2,8 @@
  * Escalations repository.
  */
 
-import type { Escalation, EscalationInput } from '../../../shared/domain'
-import { queryAll, run } from '../connection'
+import type { Escalation, EscalationInput } from '@shared/domain'
+import { queryAll, run } from '@main/db/connection'
 
 export function getEscalations(): Escalation[] {
   return queryAll('SELECT * FROM escalations') as unknown as Escalation[]

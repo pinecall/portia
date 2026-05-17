@@ -4,7 +4,7 @@
 
 import type { ToolContext, ToolHandler } from './types'
 import type { Call } from '@pinecall/core'
-import * as ToolDefs from '../tools'
+import * as ToolDefs from '@main/agent/tools'
 import { identifyVisitor } from './handlers/identify-visitor'
 import { openDoor } from './handlers/open-door'
 import { lookupVisitor } from './handlers/lookup-visitor'

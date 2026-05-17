@@ -2,8 +2,8 @@
  * Access Codes repository — CRUD + validation.
  */
 
-import type { AccessCode, AccessCodeInput, CodeValidation } from '../../../shared/domain'
-import { queryAll, queryOne, run } from '../connection'
+import type { AccessCode, AccessCodeInput, CodeValidation } from '@shared/domain'
+import { queryAll, queryOne, run } from '@main/db/connection'
 import { randomBytes } from 'node:crypto'
 
 export function getAccessCodes(): AccessCode[] {

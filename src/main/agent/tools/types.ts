@@ -2,7 +2,7 @@
  * Tool handler types.
  */
 
-import type { PortiaDB } from '../../db'
+import type { PortiaDB } from '@main/db'
 import type { TcivClient } from 'tciv-client'
 import type { Call } from '@pinecall/core'
 

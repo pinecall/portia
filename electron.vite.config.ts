@@ -5,6 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin({ exclude: ['@pinecall/core', 'tciv-client'] })],
+    resolve: {
+      alias: {
+        '@main': resolve('src/main'),
+        '@shared': resolve('src/shared'),
+      },
+    },
     build: {
       rollupOptions: {
         external: ['sql.js']
@@ -18,7 +24,8 @@ export default defineConfig({
     plugins: [react()],
     resolve: {
       alias: {
-        '@': resolve('src/renderer/src')
+        '@ui': resolve('src/renderer/src'),
+        '@shared': resolve('src/shared'),
       }
     }
   }

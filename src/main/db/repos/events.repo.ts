@@ -2,8 +2,8 @@
  * Events repository.
  */
 
-import type { AppEvent, EventInput } from '../../../shared/domain'
-import { queryAll, run } from '../connection'
+import type { AppEvent, EventInput } from '@shared/domain'
+import { queryAll, run } from '@main/db/connection'
 
 export function getEvents(limit = 100): AppEvent[] {
   return queryAll('SELECT * FROM events ORDER BY date DESC LIMIT ?', [limit]) as unknown as AppEvent[]

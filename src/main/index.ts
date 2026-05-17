@@ -16,8 +16,8 @@ import { WebSocket } from 'ws'
 import { app, BrowserWindow, shell, protocol } from 'electron'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { PortiaDB } from './db'
-import { registerIpcHandlers } from './ipc'
+import { PortiaDB } from '@main/db'
+import { registerIpcHandlers } from '@main/ipc'
 
 let mainWindow: BrowserWindow | null = null
 let db: PortiaDB

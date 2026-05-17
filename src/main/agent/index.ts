@@ -3,14 +3,16 @@
  *
  * Slim orchestrator: creates and connects the agent.
  * All logic is delegated to prompt/, tools/, events/, keyterms.
+ *
+ * Prompt placeholders ({{building}}, {{team}}, {{codes}}) are resolved
+ * server-side via setPromptVars. {{date}} and {{time}} are built-in.
  */
 
 import { Pinecall } from '@pinecall/core'
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 import type { TcivClient } from 'tciv-client'
-import { ENV } from '../config/env'
-import { buildPrompt } from './prompt/builder'
-import { buildGreeting } from './prompt/greeting'
+import { ENV } from '@main/config/env'
+import { getPromptTemplate, getPromptVars, buildGreeting } from './prompt/builder'
 import { buildKeyterms } from './keyterms'
 import { toolSchemas } from './tools/registry'
 import { wireAgentEvents } from './events/wire'
@@ -54,20 +56,27 @@ export async function createAgent(opts: PortiaAgentOptions) {
   await pc.connect()
 
   const agentId = getAgentId(opts.db)
-  const prompt = buildPrompt(opts.db)
+  const promptTemplate = getPromptTemplate()
+  const promptVars = getPromptVars(opts.db)
   const greeting = buildGreeting(opts.db)
   const tools = toolSchemas()
   const keyterms = buildKeyterms(opts.db)
   const sttConfig = { provider: 'deepgram-flux', keyterms }
 
-  console.log(`[agent] ID: ${agentId} | Prompt: ${prompt.length} chars | Phone: ${opts.sipUri}`)
+  console.log(`[agent] ID: ${agentId} | Template: ${promptTemplate.length} chars | Phone: ${opts.sipUri}`)
 
   const agent = pc.agent(agentId, {
     voice: opts.voice || ENV.VOICE_ID,
     language: opts.language || 'es',
     stt: sttConfig,
     turnDetection: 'native',
-    llm: { engine: 'openai', model: ENV.LLM_MODEL, enabled: true, instructions: prompt },
+    llm: {
+      engine: 'openai',
+      model: ENV.LLM_MODEL,
+      enabled: true,
+      instructions: promptTemplate,
+      vars: promptVars,
+    },
     tools,
     greeting,
   })

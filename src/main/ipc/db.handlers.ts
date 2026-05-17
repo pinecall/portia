@@ -3,13 +3,13 @@
  */
 
 import { ipcMain } from 'electron'
-import type { PortiaDB } from '../db'
+import type { PortiaDB } from '@main/db'
 
 export function registerDbHandlers(db: PortiaDB) {
   // Helper: refresh agent keyterms after DB mutations
   const _refreshKeyterms = async () => {
     try {
-      const { refreshKeyterms } = await import('../agent/bootstrap')
+      const { refreshKeyterms } = await import('@main/agent/bootstrap')
       refreshKeyterms()
     } catch {}
   }
