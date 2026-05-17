@@ -105,13 +105,40 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
   const [provisioning, setProvisioning] = useState(false)
   const [provisionDone, setProvisionDone] = useState(false)
   const [provisionError, setProvisionError] = useState('')
+  const [provisionStep, setProvisionStep] = useState('')
 
   const finish = async () => {
     setProvisioning(true)
     setProvisionError('')
     try {
+      // 1. Detect public IP
+      setProvisionStep('Detecting public IP...')
+      const ipResult = await window.portia.invoke('sip:detect-ip') as any
+      if (!ipResult?.ip) {
+        throw new Error('Could not detect public IP. Check your internet connection.')
+      }
+      const publicIp = ipResult.ip
+
+      // 2. Whitelist IP on Twilio SIP domain
+      setProvisionStep(`Whitelisting IP ${publicIp}...`)
+      const whitelistResult = await window.portia.invoke('sip:whitelist-ip', {
+        ip: publicIp,
+        name: `Portia-${publicIp}`,
+      }) as any
+      if (whitelistResult?.error && !whitelistResult?.success) {
+        throw new Error(`IP whitelist failed: ${whitelistResult.error}`)
+      }
+
+      // 3. Provision intercom (DAK + SIP config)
+      setProvisionStep('Configuring intercom...')
       await window.portia.invoke('zenitel:provision')
+
+      // 4. Verify SIP registration works
+      setProvisionStep('Verifying SIP registration...')
+      await new Promise(r => setTimeout(r, 3000))
+
       setProvisionDone(true)
+      setProvisionStep('')
       setTimeout(async () => {
         await window.portia.invoke('config:wizard-complete')
         onComplete()
@@ -119,6 +146,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     } catch (err: any) {
       setProvisionError(err.message || 'Provisioning failed')
       setProvisioning(false)
+      setProvisionStep('')
     }
   }
 
@@ -213,7 +241,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
 
         {step === 2 && (
           <div className="wizard-card">
-            <h2>{provisioning ? 'Configuring intercom...' : provisionDone ? 'Setup complete' : 'Configure intercom'}</h2>
+            <h2>{provisioning ? (provisionStep || 'Configuring...') : provisionDone ? 'Setup complete' : 'Configure intercom'}</h2>
             {!provisioning && !provisionDone && (
               <>
                 <p className="wizard-sub" style={{ textAlign: 'left' }}>This will reconfigure your Zenitel to call Portia. The device reboots after (~30s).</p>
@@ -231,8 +259,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
             )}
             {provisioning && !provisionDone && (
               <div className="checklist">
-                <div className="check-item"><Loader2 size={14} className="spin" /> Downloading config...</div>
-                <div className="check-item"><Loader2 size={14} className="spin" /> Setting SIP + DAK + Webcall</div>
+                <div className="check-item"><Loader2 size={14} className="spin" /> {provisionStep || 'Starting...'}</div>
               </div>
             )}
             {provisionDone && (

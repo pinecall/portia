@@ -6,7 +6,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron'
-import { ZenitelClient, scanNetwork } from 'zenitel'
+import { TcivClient, scanNetwork } from 'tciv-client'
 import type { PortiaDB } from './db'
 
 export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
@@ -162,12 +162,75 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
       return { running: false }
     }
   })
+
+  // ── SIP IP Whitelisting ──────────────────────────────────────────────
+
+  ipcMain.handle('sip:detect-ip', async () => {
+    // Get public IP via external service
+    try {
+      const resp = await fetch('https://api.ipify.org?format=json')
+      const data = await resp.json() as { ip: string }
+      return { ip: data.ip }
+    } catch (err: any) {
+      return { ip: null, error: err.message }
+    }
+  })
+
+  ipcMain.handle('sip:check-ip', async (_, opts: { ip: string }) => {
+    const config = db.getConfig()
+    const domain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
+    const apiKey = config.pinecallApiKey
+    const serverUrl = config.pinecallServerUrl || 'https://voice.pinecall.io'
+
+    if (!apiKey) return { error: 'No API key configured' }
+
+    try {
+      const resp = await fetch(`${serverUrl}/api/sdk/sip/check-ip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({ domain, ip: opts.ip }),
+      })
+      return await resp.json()
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('sip:whitelist-ip', async (_, opts: { ip: string; name?: string }) => {
+    const config = db.getConfig()
+    const domain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
+    const apiKey = config.pinecallApiKey
+    const serverUrl = config.pinecallServerUrl || 'https://voice.pinecall.io'
+
+    if (!apiKey) return { error: 'No API key configured' }
+
+    try {
+      const resp = await fetch(`${serverUrl}/api/sdk/sip/whitelist-ip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+          domain,
+          ip: opts.ip,
+          name: opts.name || 'Portia',
+        }),
+      })
+      return await resp.json()
+    } catch (err: any) {
+      return { success: false, error: err.message }
+    }
+  })
 }
 
 // ── Helper ──────────────────────────────────────────────────────────────
 
 function _client(config: { zenitelHost: string; zenitelUser: string; zenitelPassword: string }) {
-  return new ZenitelClient({
+  return new TcivClient({
     host: config.zenitelHost,
     user: config.zenitelUser,
     password: config.zenitelPassword,

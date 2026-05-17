@@ -31,13 +31,13 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
 
   try {
     const { default: createAgent } = await import('./index')
-    const { ZenitelClient } = await import('zenitel')
+    const { TcivClient } = await import('tciv-client')
 
     const sipDomain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
     const sipId = config.sipId || `portia-${Math.random().toString(36).slice(2, 6)}`
     const sipUri = `sip:${sipId}@${sipDomain}`
 
-    const zenitel = new ZenitelClient({
+    const zenitel = new TcivClient({
       host: config.zenitelHost,
       user: config.zenitelUser || 'admin',
       password: config.zenitelPassword || 'alphaadmin',

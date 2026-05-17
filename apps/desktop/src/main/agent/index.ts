@@ -13,7 +13,7 @@ import { Pinecall } from '@pinecall/core'
 import type { Agent } from '@pinecall/core'
 import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '../db'
-import type { ZenitelClient } from 'zenitel'
+import type { TcivClient } from 'tciv-client'
 import * as ToolDefs from './tools'
 
 // ── Agent ID ─────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ interface PortiaAgentOptions {
   apiKey: string
   sipUri: string
   db: PortiaDB
-  zenitel: ZenitelClient
+  zenitel: TcivClient
   voice?: string
   language?: string
   onCallEvent?: (event: any) => void
@@ -51,7 +51,7 @@ interface PortiaAgentOptions {
 
 // ── Tool handlers ────────────────────────────────────────────────────────
 
-function buildToolHandlers(db: PortiaDB, zenitel: ZenitelClient) {
+function buildToolHandlers(db: PortiaDB, zenitel: TcivClient) {
   return {
     identifyVisitor: async (params: any, _call: Call) => {
       const name = params.name || ''
