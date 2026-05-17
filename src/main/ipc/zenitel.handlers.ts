@@ -87,7 +87,10 @@ export function registerZenitelHandlers(db: PortiaDB) {
       console.log(`[zenitel] DAK already correct — skipping`)
     }
 
-    // 3. Reboot only if SIP config changed (required for registration)
+    // 3. Enable webcall + relay HTTP API
+    await z.enableWebcall()
+
+    // 4. Reboot only if SIP config changed (required for registration)
     if (needsReboot) {
       console.log(`[zenitel] Rebooting to apply SIP changes...`)
       await z.reboot()
