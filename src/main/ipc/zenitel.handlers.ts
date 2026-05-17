@@ -42,26 +42,35 @@ export function registerZenitelHandlers(db: PortiaDB) {
   ipcMain.handle('zenitel:provision', async () => {
     const config = db.getConfig()
     const z = _client(config)
-    const sipDomain = config.sipDomain || ENV.SIP_DOMAIN
-    const sipId = config.agentPhone || config.sipId || 'portia'
-    const dakAddress = `${sipId}@${sipDomain}`
+    const sipDomain = ENV.SIP_DOMAIN
 
-    // 1. Configure SIP registrar domain + directory number + auth on the intercom
+    // SIP identity — fixed Twilio credential for this intercom
+    const sipName = ENV.SIP_NAME
+    const sipId = ENV.SIP_ID
+
+    // DAK target — the Portia agent's phone (dynamic per installation)
+    const agentPhone = config.agentPhone || config.sipId || 'portia'
+    const dakAddress = `${agentPhone}@${sipDomain}`
+
+    // 1. Configure SIP registration on the intercom
     await z.setSIPConfig({
-      domain: sipDomain,
+      displayName: sipName,
       directoryNumber: sipId,
-      authUsername: ENV.SIP_AUTH_USER || undefined,
-      authPassword: ENV.SIP_AUTH_PASS || undefined,
+      domain: sipDomain,
+      authUsername: ENV.SIP_AUTH_USER,
+      authPassword: ENV.SIP_AUTH_PASS,
+      outboundProxy: sipDomain,
+      transport: 'udp',
     })
 
-    // 2. Set DAK (call button) to dial the agent
+    // 2. Set DAK (call button) → dials the Portia agent
     await z.setDAK(dakAddress)
 
     // 3. Enable webcall + relay HTTP API
     await z.enableWebcall()
 
     db.updateConfig({ sipId, sipDomain })
-    console.log(`[zenitel] Provisioned: SIP domain=${sipDomain}, id=${sipId}, DAK=${dakAddress}`)
+    console.log(`[zenitel] Provisioned: SIP ${sipId}@${sipDomain} | DAK → ${dakAddress}`)
     return { sipId, sipDomain, dakAddress }
   })
 
