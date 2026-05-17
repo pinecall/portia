@@ -234,16 +234,20 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
 
       // 6. Provision (DAK + SIP + webcall)
       steps = updateStep(steps, 5, 'active')
-      await window.portia.invoke('zenitel:provision')
+      const result = await window.portia.invoke('zenitel:provision') as { needsReboot?: boolean }
       steps = updateStep(steps, 5, 'done')
 
-      // 7. Wait for provision reboot
-      steps = updateStep(steps, 6, 'active')
-      setRebootMessage('Applying configuration — rebooting...')
-      setShowRebootModal(true)
-      await window.portia.invoke('zenitel:wait-reboot')
-      setShowRebootModal(false)
-      steps = updateStep(steps, 6, 'done')
+      // 7. Wait for reboot (only if SIP config changed)
+      if (result?.needsReboot) {
+        steps = updateStep(steps, 6, 'active')
+        setRebootMessage('Applying SIP configuration — rebooting...')
+        setShowRebootModal(true)
+        await window.portia.invoke('zenitel:wait-reboot')
+        setShowRebootModal(false)
+        steps = updateStep(steps, 6, 'done')
+      } else {
+        steps = updateStep(steps, 6, 'done')
+      }
 
       setProvisionDone(true)
       setProvisionStep('')

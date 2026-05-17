@@ -52,26 +52,57 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const agentPhone = config.agentPhone || config.sipId || 'portia'
     const dakAddress = `${agentPhone}@${sipDomain}`
 
-    // 1. Configure SIP registration on the intercom
-    await z.setSIPConfig({
-      displayName: sipName,
-      directoryNumber: sipId,
-      domain: sipDomain,
-      authUsername: ENV.SIP_AUTH_USER,
-      authPassword: ENV.SIP_AUTH_PASS,
-      outboundProxy: sipDomain,
-      transport: 'udp',
-    })
+    // Read current state to avoid unnecessary writes + reboots
+    const currentSip = await z.getSIPConfig()
+    const currentDak = await z.getDAK()
+    const info = await z.getDeviceInfo()
 
-    // 2. Set DAK (call button) → dials the Portia agent
-    await z.setDAK(dakAddress)
+    const sipOk = currentSip.domain === sipDomain
+      && currentSip.directoryNumber === sipId
+      && currentSip.authUsername === ENV.SIP_AUTH_USER
+    const dakOk = currentDak === dakAddress
+    let needsReboot = false
 
-    // 3. Enable webcall + relay HTTP API
-    await z.enableWebcall()
+    // 1. Configure SIP registration (only if changed)
+    if (!sipOk) {
+      await z.setSIPConfig({
+        displayName: sipName,
+        directoryNumber: sipId,
+        domain: sipDomain,
+        authUsername: ENV.SIP_AUTH_USER,
+        authPassword: ENV.SIP_AUTH_PASS,
+        outboundProxy: sipDomain,
+        transport: 'udp',
+      })
+      needsReboot = true
+      console.log(`[zenitel] SIP config updated: ${sipId}@${sipDomain}`)
+    } else {
+      console.log(`[zenitel] SIP config already correct — skipping`)
+    }
+
+    // 2. Set DAK (only if changed)
+    if (!dakOk) {
+      await z.setDAK(dakAddress)
+      console.log(`[zenitel] DAK updated → ${dakAddress}`)
+    } else {
+      console.log(`[zenitel] DAK already correct — skipping`)
+    }
+
+    // 3. Enable webcall (idempotent, always safe)
+    if (!info.webcallEnabled) {
+      await z.enableWebcall()
+      console.log(`[zenitel] Webcall enabled`)
+    }
+
+    // 4. Reboot only if SIP config changed (required for registration)
+    if (needsReboot) {
+      console.log(`[zenitel] Rebooting to apply SIP changes...`)
+      await z.reboot()
+    }
 
     db.updateConfig({ sipId, sipDomain })
-    console.log(`[zenitel] Provisioned: SIP ${sipId}@${sipDomain} | DAK → ${dakAddress}`)
-    return { sipId, sipDomain, dakAddress }
+    console.log(`[zenitel] Provision done (reboot=${needsReboot})`)
+    return { sipId, sipDomain, dakAddress, needsReboot }
   })
 
   ipcMain.handle('zenitel:reboot', async () => { await _client(db.getConfig()).reboot() })
