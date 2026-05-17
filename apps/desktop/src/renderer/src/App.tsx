@@ -119,24 +119,34 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
       }
       const publicIp = ipResult.ip
 
-      // 2. Whitelist IP on Twilio SIP domain
-      setProvisionStep(`Whitelisting IP ${publicIp}...`)
-      const whitelistResult = await window.portia.invoke('sip:whitelist-ip', {
-        ip: publicIp,
-        name: `Portia-${publicIp}`,
-      }) as any
-      if (whitelistResult?.error && !whitelistResult?.success) {
-        throw new Error(`IP whitelist failed: ${whitelistResult.error}`)
+      // 2. Check if IP is already whitelisted
+      setProvisionStep(`Checking IP ${publicIp}...`)
+      const checkFirst = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
+
+      if (checkFirst?.whitelisted) {
+        // Already good — skip whitelist
+        setProvisionStep('IP already whitelisted ✓')
+        await new Promise(r => setTimeout(r, 800))
+      } else {
+        // 3. Whitelist IP on Twilio SIP domain
+        setProvisionStep(`Whitelisting IP ${publicIp}...`)
+        const whitelistResult = await window.portia.invoke('sip:whitelist-ip', {
+          ip: publicIp,
+          name: `Portia-${publicIp}`,
+        }) as any
+        if (whitelistResult?.error && !whitelistResult?.success) {
+          throw new Error(`IP whitelist failed: ${whitelistResult.error}`)
+        }
+
+        // 4. Verify it actually went through
+        setProvisionStep('Verifying SIP whitelist...')
+        const checkResult = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
+        if (!checkResult?.whitelisted) {
+          throw new Error('SIP verification failed: IP was not whitelisted. Cannot configure intercom.')
+        }
       }
 
-      // 3. Verify IP was actually whitelisted before touching intercom
-      setProvisionStep('Verifying SIP whitelist...')
-      const checkResult = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
-      if (!checkResult?.whitelisted) {
-        throw new Error('SIP verification failed: IP was not whitelisted. Cannot configure intercom.')
-      }
-
-      // 4. Provision intercom (DAK + SIP config) — only after whitelist is confirmed
+      // 5. Provision intercom (DAK + SIP config) — only after whitelist is confirmed
       setProvisionStep('Configuring intercom...')
       await window.portia.invoke('zenitel:provision')
 
