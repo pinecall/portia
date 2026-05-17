@@ -55,7 +55,6 @@ export function registerZenitelHandlers(db: PortiaDB) {
     // Read current state to avoid unnecessary writes + reboots
     const currentSip = await z.getSIPConfig()
     const currentDak = await z.getDAK()
-    const info = await z.getDeviceInfo()
 
     const sipOk = currentSip.domain === sipDomain
       && currentSip.directoryNumber === sipId
@@ -88,13 +87,7 @@ export function registerZenitelHandlers(db: PortiaDB) {
       console.log(`[zenitel] DAK already correct — skipping`)
     }
 
-    // 3. Enable webcall (idempotent, always safe)
-    if (!info.webcallEnabled) {
-      await z.enableWebcall()
-      console.log(`[zenitel] Webcall enabled`)
-    }
-
-    // 4. Reboot only if SIP config changed (required for registration)
+    // 3. Reboot only if SIP config changed (required for registration)
     if (needsReboot) {
       console.log(`[zenitel] Rebooting to apply SIP changes...`)
       await z.reboot()
