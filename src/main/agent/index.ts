@@ -14,6 +14,7 @@ import type { Agent } from '@pinecall/core'
 import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '../db'
 import type { TcivClient } from 'tciv-client'
+import { ENV } from '../config/env'
 import * as ToolDefs from './tools'
 
 // ── Agent ID ─────────────────────────────────────────────────────────────
@@ -282,13 +283,13 @@ export async function createAgent(opts: PortiaAgentOptions) {
 
   // Create agent with server-side LLM, tools, and greeting
   const agent = pc.agent(agentId, {
-    voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
+    voice: opts.voice || ENV.VOICE_ID,
     language: opts.language || 'es',
     stt: sttConfig,
     turnDetection: 'native',
     llm: {
       engine: 'openai',
-      model: 'gpt-4.1-mini',
+      model: ENV.LLM_MODEL,
       enabled: true,
       instructions: prompt,
     },
@@ -298,7 +299,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
 
   // Add SIP phone channel
   agent.addChannel('phone', opts.sipUri, {
-    voice: opts.voice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
+    voice: opts.voice || ENV.VOICE_ID,
     language: opts.language || 'es',
     stt: sttConfig,
     turnDetection: 'native',

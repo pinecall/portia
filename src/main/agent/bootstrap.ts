@@ -8,9 +8,7 @@
 import type { PortiaDB } from '../db'
 import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/core'
-
-// Cointel.es org — owns the SIP domain used by Portia
-const API_KEY = 'pk_65ecdd0b6a90eed59dd3b394867671f4bb72091beb54430c'
+import { ENV } from '../config/env'
 
 let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 
@@ -31,18 +29,18 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
     const { default: createAgent } = await import('./index')
     const { TcivClient } = await import('tciv-client')
 
-    const sipDomain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
+    const sipDomain = config.sipDomain || ENV.SIP_DOMAIN
     const sipId = config.agentPhone || `portia-${Math.random().toString(36).slice(2, 6)}`
     const sipUri = `sip:${sipId}@${sipDomain}`
 
     const zenitel = new TcivClient({
       host: config.zenitelHost,
       user: config.zenitelUser || 'admin',
-      password: config.zenitelPassword || 'alphaadmin',
+      password: config.zenitelPassword || ENV.ZENITEL_PASS,
     })
 
     const result = await createAgent({
-      apiKey: API_KEY,
+      apiKey: ENV.API_KEY,
       sipUri,
       db,
       zenitel,

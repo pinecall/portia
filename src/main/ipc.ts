@@ -8,11 +8,9 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { TcivClient, scanNetwork } from 'tciv-client'
 import type { PortiaDB } from './db'
+import { ENV } from './config/env'
 
-// Cointel.es org — owns the SIP domain used by Portia
-const DEFAULT_API_KEY = 'pk_65ecdd0b6a90eed59dd3b394867671f4bb72091beb54430c'
-const DEFAULT_SIP_DOMAIN = 'testing-mo16m3gw.sip.twilio.com'
-const DEFAULT_SERVER_URL = 'https://voice.pinecall.io'
+const SERVER_URL = 'https://voice.pinecall.io'
 
 export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   // ── Zenitel ───────────────────────────────────────────────────────────
@@ -60,7 +58,7 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   ipcMain.handle('zenitel:provision', async () => {
     const config = db.getConfig()
     const z = _client(config)
-    const sipDomain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
+    const sipDomain = config.sipDomain || ENV.SIP_DOMAIN
     const sipId = config.agentPhone || config.sipId || 'portia'
     const dakAddress = `${sipId}@${sipDomain}`
 
@@ -214,9 +212,9 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('sip:check-ip', async (_, opts: { ip: string }) => {
     const config = db.getConfig()
-    const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
-    const apiKey = DEFAULT_API_KEY
-    const serverUrl = DEFAULT_SERVER_URL
+    const domain = config.sipDomain || ENV.SIP_DOMAIN
+    const apiKey = ENV.API_KEY
+    const serverUrl = SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
@@ -237,9 +235,9 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('sip:whitelist-ip', async (_, opts: { ip: string; name?: string }) => {
     const config = db.getConfig()
-    const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
-    const apiKey = DEFAULT_API_KEY
-    const serverUrl = DEFAULT_SERVER_URL
+    const domain = config.sipDomain || ENV.SIP_DOMAIN
+    const apiKey = ENV.API_KEY
+    const serverUrl = SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
