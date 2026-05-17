@@ -114,7 +114,14 @@ function buildToolHandlers(db: PortiaDB, zenitel: ZenitelClient) {
       }
       console.log(`[Tool] Valid code for: ${result.visitor} — opening door`)
       try {
-        await zenitel.activateRelay({ relayId: 'relay1', timer: 3 })
+        await zenitel.activateRelay({ relayId: 'relay1', timer: 7 })
+        // Safety net: explicitly deactivate after 7s in case device timer fails
+        setTimeout(async () => {
+          try {
+            await zenitel.deactivateRelay('relay1')
+            console.log(`[Tool] Door auto-closed after 7s`)
+          } catch { /* relay already deactivated */ }
+        }, 7000)
       } catch (err: any) {
         console.error(`[Tool] Relay failed:`, err.message)
         return { success: false, error: 'Failed to open door — relay error' }
