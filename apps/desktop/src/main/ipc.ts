@@ -79,6 +79,10 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
     await _client(db.getConfig()).reboot()
   })
 
+  ipcMain.handle('zenitel:factory-reset', async () => {
+    await _client(db.getConfig()).factoryReset('keep-ip')
+  })
+
   ipcMain.handle('zenitel:video-url', () => {
     const config = db.getConfig()
     return `portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser}&pass=${config.zenitelPassword}`

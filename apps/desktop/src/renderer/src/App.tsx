@@ -102,6 +102,19 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     setTesting(false)
   }
 
+  const [resetting, setResetting] = useState(false)
+  const [resetDone, setResetDone] = useState(false)
+
+  const factoryReset = async () => {
+    if (!confirm('Factory reset will erase all settings on the intercom. Continue?')) return
+    setResetting(true)
+    setResetDone(false)
+    await window.portia.invoke('zenitel:factory-reset')
+    setResetting(false)
+    setResetDone(true)
+    setTestResult(null)
+  }
+
   const [provisioning, setProvisioning] = useState(false)
   const [provisionDone, setProvisionDone] = useState(false)
   const [provisionError, setProvisionError] = useState('')
@@ -242,6 +255,17 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
                   <><Check size={16} /><div><div>Connected — {testResult.model}</div><div className="test-detail">Webcall: {testResult.webcallEnabled ? 'Enabled' : 'Disabled'}</div></div></>
                 ) : (
                   <><WifiOff size={16} /><div>Connection failed — check credentials</div></>
+                )}
+              </div>
+            )}
+            {testResult?.reachable && (
+              <div style={{ marginTop: 8 }}>
+                {resetDone ? (
+                  <div className="test-result ok"><Check size={16} /><div>Factory reset complete — device is rebooting (~30s). Re-test when ready.</div></div>
+                ) : (
+                  <button className="btn-ghost" onClick={factoryReset} disabled={resetting} style={{ fontSize: 12, opacity: 0.7 }}>
+                    {resetting ? <><Loader2 size={14} className="spin" /> Resetting...</> : '⚠️ Factory Reset (optional)'}
+                  </button>
                 )}
               </div>
             )}
