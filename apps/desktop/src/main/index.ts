@@ -102,11 +102,9 @@ app.whenReady().then(async () => {
   const config = db.getConfig()
   const updates: Record<string, any> = {}
   if (!config.agentPhone) updates.agentPhone = PortiaDB.generateSipId()
-  if (!config.pinecallApiKey && process.env.PINECALL_API_KEY) updates.pinecallApiKey = process.env.PINECALL_API_KEY
   if (Object.keys(updates).length) {
     db.updateConfig(updates)
     if (updates.agentPhone) console.log(`[Portia] Generated SIP ID: ${updates.agentPhone}`)
-    if (updates.pinecallApiKey) console.log(`[Portia] API key seeded from env`)
     Object.assign(config, updates)
   }
 
@@ -116,8 +114,8 @@ app.whenReady().then(async () => {
   // 4. IPC
   registerIpcHandlers(window, db)
 
-  // 5. Auto-start agent if wizard is done + API key exists
-  if (config.wizardCompleted && config.pinecallApiKey) {
+  // 5. Auto-start agent if wizard is done
+  if (config.wizardCompleted) {
     import('./agent/bootstrap').then(({ startAgent }) => {
       startAgent({ db, window }).then(ok => {
         console.log(`[Portia] Agent auto-start: ${ok ? 'connected' : 'skipped'}`)

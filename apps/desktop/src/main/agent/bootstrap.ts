@@ -9,6 +9,9 @@ import type { PortiaDB } from '../db'
 import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/core'
 
+// Cointel.es org — owns the SIP domain used by Portia
+const API_KEY = 'pk_65ecdd0b6a90eed59dd3b394867671f4bb72091beb54430c'
+
 let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 
 interface BootstrapOptions {
@@ -21,11 +24,6 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
 
   if (!config.zenitelHost) {
     console.log('[Agent] No zenitelHost configured, skipping')
-    return false
-  }
-
-  if (!config.pinecallApiKey) {
-    console.log('[Agent] No API key configured, skipping')
     return false
   }
 
@@ -44,7 +42,7 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
     })
 
     const result = await createAgent({
-      apiKey: config.pinecallApiKey,
+      apiKey: API_KEY,
       sipUri,
       db,
       zenitel,

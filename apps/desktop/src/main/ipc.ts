@@ -184,8 +184,8 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   ipcMain.handle('sip:check-ip', async (_, opts: { ip: string }) => {
     const config = db.getConfig()
     const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
-    const apiKey = config.pinecallApiKey || DEFAULT_API_KEY
-    const serverUrl = config.pinecallServerUrl || DEFAULT_SERVER_URL
+    const apiKey = DEFAULT_API_KEY
+    const serverUrl = DEFAULT_SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
@@ -207,8 +207,8 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   ipcMain.handle('sip:whitelist-ip', async (_, opts: { ip: string; name?: string }) => {
     const config = db.getConfig()
     const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
-    const apiKey = config.pinecallApiKey || DEFAULT_API_KEY
-    const serverUrl = config.pinecallServerUrl || DEFAULT_SERVER_URL
+    const apiKey = DEFAULT_API_KEY
+    const serverUrl = DEFAULT_SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
