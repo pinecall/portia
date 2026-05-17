@@ -71,6 +71,31 @@ export default function App() {
 
 // ── Wizard ───────────────────────────────────────────────────────────────
 
+// ── Reboot Modal (reusable) ──────────────────────────────────────────────
+
+function RebootModal({ message, onDone }: { message: string; onDone: () => void }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(e => e + 1), 1000)
+    window.portia.invoke('zenitel:wait-reboot').then(() => {
+      clearInterval(t)
+      onDone()
+    })
+    return () => clearInterval(t)
+  }, [])
+  return (
+    <div className="reboot-modal-overlay">
+      <div className="reboot-modal">
+        <Loader2 size={32} className="spin" />
+        <h3>{message}</h3>
+        <p className="reboot-elapsed">{elapsed}s — waiting for device...</p>
+      </div>
+    </div>
+  )
+}
+
+// ── Wizard ───────────────────────────────────────────────────────────────
+
 function Wizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0)
   const [scanning, setScanning] = useState(false)
@@ -102,66 +127,123 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     setTesting(false)
   }
 
+  // ── Factory reset ──
   const [resetting, setResetting] = useState(false)
-  const [resetDone, setResetDone] = useState(false)
+  const [showRebootModal, setShowRebootModal] = useState(false)
+  const [rebootMessage, setRebootMessage] = useState('')
 
   const factoryReset = async () => {
     if (!confirm('Factory reset will erase all settings on the intercom. Continue?')) return
     setResetting(true)
-    setResetDone(false)
     await window.portia.invoke('zenitel:factory-reset')
     setResetting(false)
-    setResetDone(true)
+    setRebootMessage('Factory reset — waiting for device to reboot...')
+    setShowRebootModal(true)
+  }
+
+  const onRebootDone = () => {
+    setShowRebootModal(false)
+    setRebootMessage('')
     setTestResult(null)
   }
 
+  // ── Settings preview (step 2) ──
+  const [deviceSettings, setDeviceSettings] = useState<any>(null)
+  const [loadingSettings, setLoadingSettings] = useState(false)
+
+  useEffect(() => {
+    if (step === 2) {
+      setLoadingSettings(true)
+      window.portia.invoke('zenitel:get-settings')
+        .then((s: any) => setDeviceSettings(s))
+        .catch(() => setDeviceSettings(null))
+        .finally(() => setLoadingSettings(false))
+    }
+  }, [step])
+
+  // ── Provisioning ──
   const [provisioning, setProvisioning] = useState(false)
   const [provisionDone, setProvisionDone] = useState(false)
   const [provisionError, setProvisionError] = useState('')
   const [provisionStep, setProvisionStep] = useState('')
+  const [provisionSteps, setProvisionSteps] = useState<{ label: string; status: 'pending' | 'active' | 'done' | 'skip' }[]>([])
+
+  const updateStep = (arr: typeof provisionSteps, idx: number, status: 'active' | 'done' | 'skip') => {
+    const next = [...arr]
+    next[idx] = { ...next[idx], status }
+    setProvisionSteps(next)
+    if (status === 'active') setProvisionStep(next[idx].label)
+    return next
+  }
 
   const finish = async () => {
     setProvisioning(true)
     setProvisionError('')
+    const newPhone = `portia-${Math.random().toString(36).slice(2, 6)}`
+
+    let steps = [
+      { label: 'Generating SIP identity', status: 'pending' as const },
+      { label: 'Checking device mode', status: 'pending' as const },
+      { label: 'Switching to SIP mode', status: 'pending' as const },
+      { label: 'Detecting public IP', status: 'pending' as const },
+      { label: 'Whitelisting IP', status: 'pending' as const },
+      { label: 'Configuring intercom', status: 'pending' as const },
+      { label: 'Waiting for reboot', status: 'pending' as const },
+    ]
+    setProvisionSteps(steps)
+
     try {
-      // 1. Detect public IP
-      setProvisionStep('Detecting public IP...')
-      const ipResult = await window.portia.invoke('sip:detect-ip') as any
-      if (!ipResult?.ip) {
-        throw new Error('Could not detect public IP. Check your internet connection.')
-      }
-      const publicIp = ipResult.ip
+      // 1. New SIP ID
+      steps = updateStep(steps, 0, 'active')
+      await window.portia.invoke('config:set', { agentPhone: newPhone })
+      steps = updateStep(steps, 0, 'done')
 
-      // 2. Check if IP is already whitelisted
-      setProvisionStep(`Checking IP ${publicIp}...`)
-      const checkFirst = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
+      // 2. Check mode
+      steps = updateStep(steps, 1, 'active')
+      const settings = await window.portia.invoke('zenitel:get-settings') as any
+      steps = updateStep(steps, 1, 'done')
 
-      if (checkFirst?.whitelisted) {
-        // Already good — skip whitelist
-        setProvisionStep('IP already whitelisted ✓')
-        await new Promise(r => setTimeout(r, 800))
+      // 3. Switch to SIP if needed
+      if (settings.mode !== 'sip') {
+        steps = updateStep(steps, 2, 'active')
+        await window.portia.invoke('zenitel:set-mode', 'sip')
+        setRebootMessage('Switching to SIP mode — rebooting...')
+        setShowRebootModal(true)
+        await window.portia.invoke('zenitel:wait-reboot')
+        setShowRebootModal(false)
+        steps = updateStep(steps, 2, 'done')
       } else {
-        // 3. Whitelist IP on Twilio SIP domain
-        setProvisionStep(`Whitelisting IP ${publicIp}...`)
-        const whitelistResult = await window.portia.invoke('sip:whitelist-ip', {
-          ip: publicIp,
-          name: `Portia-${publicIp}`,
-        }) as any
-        if (whitelistResult?.error && !whitelistResult?.success) {
-          throw new Error(`IP whitelist failed: ${whitelistResult.error}`)
-        }
-
-        // 4. Verify it actually went through
-        setProvisionStep('Verifying SIP whitelist...')
-        const checkResult = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
-        if (!checkResult?.whitelisted) {
-          throw new Error('SIP verification failed: IP was not whitelisted. Cannot configure intercom.')
-        }
+        steps = updateStep(steps, 2, 'skip')
       }
 
-      // 5. Provision intercom (DAK + SIP config) — only after whitelist is confirmed
-      setProvisionStep('Configuring intercom...')
+      // 4. Public IP
+      steps = updateStep(steps, 3, 'active')
+      const ipResult = await window.portia.invoke('sip:detect-ip') as any
+      if (!ipResult?.ip) throw new Error('Could not detect public IP.')
+      steps = updateStep(steps, 3, 'done')
+
+      // 5. Whitelist
+      steps = updateStep(steps, 4, 'active')
+      const check = await window.portia.invoke('sip:check-ip', { ip: ipResult.ip }) as any
+      if (check?.whitelisted) {
+        steps = updateStep(steps, 4, 'skip')
+      } else {
+        await window.portia.invoke('sip:whitelist-ip', { ip: ipResult.ip, name: `Portia-${ipResult.ip}` })
+        steps = updateStep(steps, 4, 'done')
+      }
+
+      // 6. Provision (DAK + SIP + webcall)
+      steps = updateStep(steps, 5, 'active')
       await window.portia.invoke('zenitel:provision')
+      steps = updateStep(steps, 5, 'done')
+
+      // 7. Wait for provision reboot
+      steps = updateStep(steps, 6, 'active')
+      setRebootMessage('Applying configuration — rebooting...')
+      setShowRebootModal(true)
+      await window.portia.invoke('zenitel:wait-reboot')
+      setShowRebootModal(false)
+      steps = updateStep(steps, 6, 'done')
 
       setProvisionDone(true)
       setProvisionStep('')
@@ -170,6 +252,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
         onComplete()
       }, 2000)
     } catch (err: any) {
+      setShowRebootModal(false)
       setProvisionError(err.message || 'Provisioning failed')
       setProvisioning(false)
       setProvisionStep('')
@@ -181,23 +264,22 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     onComplete()
   }
 
-  const steps = ['Detect', 'Connect', 'Ready']
+  const modeLabels: Record<string, string> = { sip: 'SIP', dip: 'ICX-AlphaCom', exc: 'Edge', srv: 'Edge Controller', pulse: 'Edge' }
+  const sipDomain = 'testing-mo16m3gw.sip.twilio.com'
 
   return (
     <div className="wizard">
+      {showRebootModal && <RebootModal message={rebootMessage} onDone={onRebootDone} />}
+
       <div className="wizard-header">
         <PortiaLogo />
         <h1>Portia Setup</h1>
-        <p className="wizard-sub">Connect your Zenitel intercom to the AI agent</p>
+        <p className="wizard-sub">Connect your intercom to the AI agent</p>
       </div>
 
       <div className="wizard-steps">
-        {steps.map((s, i) => (
-          <button
-            key={i}
-            className={`wizard-step ${step >= i ? 'active' : ''} ${step === i ? 'current' : ''}`}
-            onClick={() => i < step && setStep(i)}
-          >
+        {['Detect', 'Connect', 'Ready'].map((s, i) => (
+          <button key={i} className={`wizard-step ${step >= i ? 'active' : ''} ${step === i ? 'current' : ''}`} onClick={() => i < step && setStep(i)}>
             {step > i ? <Check size={14} /> : <span className="step-num">{i + 1}</span>}
             {s}
           </button>
@@ -218,7 +300,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
                     <Radio size={14} className="device-icon" />
                     <div className="device-info">
                       <span className="device-ip">{d.ip}</span>
-                      <span className="device-meta">{d.model || 'Zenitel'} · {d.firmware || '—'} · {d.hasCamera ? 'Camera' : 'Audio only'}</span>
+                      <span className="device-meta">{d.model || 'Intercom'} · {d.firmware || '—'} · {d.hasCamera ? 'Camera' : 'Audio only'}</span>
                     </div>
                     {host === d.ip && <Check size={14} className="device-check" />}
                   </div>
@@ -226,9 +308,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
               </div>
             )}
             <input type="text" className="input" placeholder="Or enter IP manually..." value={host} onChange={(e) => setHost(e.target.value)} />
-            <button className="btn-primary" disabled={!host} onClick={() => setStep(1)}>
-              Continue <ChevronRight size={16} />
-            </button>
+            <button className="btn-primary" disabled={!host} onClick={() => setStep(1)}>Continue <ChevronRight size={16} /></button>
           </div>
         )}
 
@@ -260,13 +340,9 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
             )}
             {testResult?.reachable && (
               <div style={{ marginTop: 8 }}>
-                {resetDone ? (
-                  <div className="test-result ok"><Check size={16} /><div>Factory reset complete — device is rebooting (~30s). Re-test when ready.</div></div>
-                ) : (
-                  <button className="btn-ghost" onClick={factoryReset} disabled={resetting} style={{ fontSize: 12, opacity: 0.7 }}>
-                    {resetting ? <><Loader2 size={14} className="spin" /> Resetting...</> : '⚠️ Factory Reset (optional)'}
-                  </button>
-                )}
+                <button className="btn-ghost" onClick={factoryReset} disabled={resetting} style={{ fontSize: 12, opacity: 0.7 }}>
+                  {resetting ? <><Loader2 size={14} className="spin" /> Resetting...</> : '⚠️ Factory Reset (optional)'}
+                </button>
               </div>
             )}
             <div className="wizard-actions">
@@ -281,22 +357,59 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
             <h2>{provisioning ? (provisionStep || 'Configuring...') : provisionDone ? 'Setup complete' : 'Configure intercom'}</h2>
             {!provisioning && !provisionDone && (
               <>
-                <p className="wizard-sub" style={{ textAlign: 'left' }}>This will reconfigure your Zenitel to call Portia. The device reboots after (~30s).</p>
-                <div className="checklist">
-                  <div className="check-item"><Check size={14} /> Zenitel at {host}</div>
-                  <div className="check-item"><Check size={14} /> Connection verified</div>
-                  <div className="check-item"><CircleDot size={14} /> SIP registration pending</div>
-                </div>
+                {loadingSettings ? (
+                  <div className="checklist"><div className="check-item"><Loader2 size={14} className="spin" /> Reading device settings...</div></div>
+                ) : deviceSettings && (
+                  <>
+                    <p className="wizard-sub" style={{ textAlign: 'left', marginBottom: 12 }}>Review the changes that will be applied:</p>
+                    <table className="settings-preview">
+                      <thead><tr><th>Setting</th><th>Current</th><th>New</th></tr></thead>
+                      <tbody>
+                        <tr className={deviceSettings.mode !== 'sip' ? 'will-change' : ''}>
+                          <td>Mode</td>
+                          <td>{modeLabels[deviceSettings.mode] || deviceSettings.mode}</td>
+                          <td>{deviceSettings.mode === 'sip' ? <span className="already-ok">✓ SIP</span> : <strong>SIP</strong>}</td>
+                        </tr>
+                        <tr className="will-change">
+                          <td>SIP Domain</td>
+                          <td>{deviceSettings.sipDomain || '—'}</td>
+                          <td><strong>{sipDomain}</strong></td>
+                        </tr>
+                        <tr className="will-change">
+                          <td>DAK Target</td>
+                          <td>{deviceSettings.sipNumber || '—'}</td>
+                          <td><strong>portia-xxxx</strong></td>
+                        </tr>
+                        <tr className={!deviceSettings.webcallEnabled ? 'will-change' : ''}>
+                          <td>Webcall</td>
+                          <td>{deviceSettings.webcallEnabled ? 'Enabled' : 'Disabled'}</td>
+                          <td>{deviceSettings.webcallEnabled ? <span className="already-ok">✓ Enabled</span> : <strong>Enabled</strong>}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </>
+                )}
                 {provisionError && <div className="test-result fail"><WifiOff size={16} /><div>{provisionError}</div></div>}
                 <div className="wizard-actions">
                   <button className="btn-ghost" onClick={skipProvision}>Skip</button>
-                  <button className="btn-primary" onClick={finish}>Provision & Launch</button>
+                  <button className="btn-primary" onClick={finish} disabled={loadingSettings}>Provision & Launch</button>
                 </div>
               </>
             )}
             {provisioning && !provisionDone && (
               <div className="checklist">
-                <div className="check-item"><Loader2 size={14} className="spin" /> {provisionStep || 'Starting...'}</div>
+                {provisionSteps.map((s, i) => (
+                  <div key={i} className={`check-item ${s.status}`}>
+                    {s.status === 'done' ? <Check size={14} /> :
+                     s.status === 'active' ? <Loader2 size={14} className="spin" /> :
+                     s.status === 'skip' ? <span style={{ opacity: 0.4 }}>—</span> :
+                     <CircleDot size={14} style={{ opacity: 0.3 }} />}
+                    <span style={{
+                      opacity: s.status === 'skip' ? 0.4 : 1,
+                      textDecoration: s.status === 'skip' ? 'line-through' : 'none',
+                    }}>{s.label}{s.status === 'skip' ? ' (skipped)' : ''}</span>
+                  </div>
+                ))}
               </div>
             )}
             {provisionDone && (
@@ -313,6 +426,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     </div>
   )
 }
+
 
 // ── Dashboard ────────────────────────────────────────────────────────────
 

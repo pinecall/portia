@@ -534,3 +534,33 @@ body {
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Reboot Modal ────────────────────────────────────────────────────── */
+.reboot-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadein 0.2s ease;
+}
+.reboot-modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 32px 40px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.reboot-modal h3 { font: 600 15px var(--font); color: var(--ink-1); margin: 12px 0 4px; }
+.reboot-elapsed { font: 400 12px var(--font); color: var(--ink-3); margin: 0; }
+
+/* ── Settings Preview Table ──────────────────────────────────────────── */
+.settings-preview {
+  width: 100%; border-collapse: collapse; font: 400 12px var(--font);
+  margin-bottom: 12px;
+}
+.settings-preview th {
+  text-align: left; font-weight: 600; color: var(--ink-3);
+  padding: 4px 8px; border-bottom: 1px solid var(--border);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.settings-preview td { padding: 6px 8px; color: var(--ink-2); border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.04)); }
+.settings-preview tr.will-change td:last-child { color: var(--accent); }
+.settings-preview .already-ok { color: var(--green, #34d399); }
+.settings-preview strong { color: var(--accent); font-weight: 600; }

@@ -83,6 +83,33 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
     await _client(db.getConfig()).factoryReset('keep-ip')
   })
 
+  ipcMain.handle('zenitel:set-mode', async (_, mode: string) => {
+    const z = _client(db.getConfig())
+    await z.setMode(mode as any)
+    await z.applyChanges()
+  })
+
+  ipcMain.handle('zenitel:wait-reboot', async () => {
+    const z = _client(db.getConfig())
+    const online = await z.waitForReboot(60000, 3000)
+    return { online }
+  })
+
+  ipcMain.handle('zenitel:get-settings', async () => {
+    const z = _client(db.getConfig())
+    const info = await z.getDeviceInfo()
+    const sip = await z.getSIPConfig()
+    return {
+      mode: info.mode,
+      model: info.model,
+      firmware: info.firmware,
+      webcallEnabled: info.webcallEnabled,
+      sipDomain: sip.domain,
+      sipNumber: sip.directoryNumber,
+      sipRegistered: info.sipRegistered,
+    }
+  })
+
   ipcMain.handle('zenitel:video-url', () => {
     const config = db.getConfig()
     return `portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser}&pass=${config.zenitelPassword}`
