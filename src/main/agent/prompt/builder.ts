@@ -1,27 +1,18 @@
 /**
- * Prompt — reads template.md, renders greeting, exposes vars for setPromptVars.
+ * Prompt — template inlined at build time via Vite ?raw import.
  *
  * The template uses {{building}}, {{team}}, {{codes}}, {{date}}, {{time}}
  * as placeholders. The server resolves {{date}} and {{time}} automatically.
  * We send {{building}}, {{team}}, {{codes}} via call.setPromptVars().
  */
 
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+// Vite inlines the .md content as a string at build time — no fs.readFileSync needed
+import template from './template.md?raw'
 import type { PortiaDB } from '@main/db'
-
-let templateCache: string | null = null
-
-function loadTemplate(): string {
-  if (templateCache) return templateCache
-  const path = resolve(__dirname, 'template.md')
-  templateCache = readFileSync(path, 'utf-8')
-  return templateCache
-}
 
 /** Return the raw prompt template (with {{placeholders}} intact). */
 export function getPromptTemplate(): string {
-  return loadTemplate()
+  return template
 }
 
 /** Build the prompt vars object for call.setPromptVars(). */
