@@ -9,19 +9,9 @@ import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { randomBytes } from 'node:crypto'
+import type { AppConfig } from '../shared/domain'
 
-export interface AppConfig {
-  zenitelHost: string
-  zenitelUser: string
-  zenitelPassword: string
-  zenitelHasCamera: boolean
-  pinecallApiKey: string
-  agentPhone: string
-  buildingName: string
-  language: string
-  wizardCompleted: boolean
-  theme: string
-}
+export type { AppConfig }
 
 const CONFIG_DEFAULTS: AppConfig = {
   zenitelHost: '',
