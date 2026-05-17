@@ -45,9 +45,21 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const sipDomain = config.sipDomain || ENV.SIP_DOMAIN
     const sipId = config.agentPhone || config.sipId || 'portia'
     const dakAddress = `${sipId}@${sipDomain}`
+
+    // 1. Configure SIP registrar domain + directory number on the intercom
+    await z.setSIPConfig({
+      domain: sipDomain,
+      directoryNumber: sipId,
+    })
+
+    // 2. Set DAK (call button) to dial the agent
     await z.setDAK(dakAddress)
+
+    // 3. Enable webcall + relay HTTP API
     await z.enableWebcall()
+
     db.updateConfig({ sipId, sipDomain })
+    console.log(`[zenitel] Provisioned: SIP domain=${sipDomain}, id=${sipId}, DAK=${dakAddress}`)
     return { sipId, sipDomain, dakAddress }
   })
 
