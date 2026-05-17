@@ -19,7 +19,7 @@
     "lucide-react": "^1.16.0",
     "sql.js": "^1.12.0",
     "ws": "^8.20.1",
-    "zenitel-client": "^0.1.0"
+    "zenitel-client": "^0.1.2"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.0",
