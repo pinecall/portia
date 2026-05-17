@@ -129,13 +129,16 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
         throw new Error(`IP whitelist failed: ${whitelistResult.error}`)
       }
 
-      // 3. Provision intercom (DAK + SIP config)
+      // 3. Verify IP was actually whitelisted before touching intercom
+      setProvisionStep('Verifying SIP whitelist...')
+      const checkResult = await window.portia.invoke('sip:check-ip', { ip: publicIp }) as any
+      if (!checkResult?.whitelisted) {
+        throw new Error('SIP verification failed: IP was not whitelisted. Cannot configure intercom.')
+      }
+
+      // 4. Provision intercom (DAK + SIP config) — only after whitelist is confirmed
       setProvisionStep('Configuring intercom...')
       await window.portia.invoke('zenitel:provision')
-
-      // 4. Verify SIP registration works
-      setProvisionStep('Verifying SIP registration...')
-      await new Promise(r => setTimeout(r, 3000))
 
       setProvisionDone(true)
       setProvisionStep('')
