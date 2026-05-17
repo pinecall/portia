@@ -111,9 +111,16 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
     return db.updateConfig(updates)
   })
 
-  ipcMain.handle('config:wizard-complete', () => {
+  ipcMain.handle('config:wizard-complete', async () => {
     db.updateConfig({ wizardCompleted: true })
     window.webContents.send('portia:wizard-done')
+    // Auto-start agent after wizard
+    try {
+      const { startAgent } = await import('./agent/bootstrap')
+      await startAgent({ db, window })
+    } catch (err: any) {
+      console.error('[Portia] Failed to start agent after wizard:', err.message)
+    }
     return true
   })
 
@@ -122,7 +129,7 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
       const { stopAgent } = await import('./agent/bootstrap')
       await stopAgent()
     } catch {}
-    db.updateConfig({ wizardCompleted: false })
+    db.updateConfig({ wizardCompleted: false, agentId: null })
     return true
   })
 

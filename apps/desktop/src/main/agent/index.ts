@@ -113,9 +113,11 @@ function buildToolHandlers(db: PortiaDB, zenitel: ZenitelClient) {
         return { success: false, error: 'Invalid access code' }
       }
       console.log(`[Tool] Valid code for: ${result.visitor} — opening door`)
-      try { call.sendDTMF('6') } catch {
-        console.log(`[Tool] DTMF failed, HTTP relay fallback`)
+      try {
         await zenitel.activateRelay({ relayId: 'relay1', timer: 3 })
+      } catch (err: any) {
+        console.error(`[Tool] Relay failed:`, err.message)
+        return { success: false, error: 'Failed to open door — relay error' }
       }
       db.addEvent({ type: 'auth', date: new Date().toISOString(), source: 'agent', details: `Code ${normalized} validated: ${result.visitor}`, visit_id: null })
       return { success: true, visitor: result.visitor, message: `Door opened for ${result.visitor}` }
@@ -345,7 +347,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
   })
 
   agent.on('bot.word', (event: any, call: Call) => {
-    emit('bot.word', { call_id: call.id, message_id: event.message_id || '', word: event.word || '', word_index: event.word_index ?? 0 })
+    emit('bot.word', { call_id: call.id, message_id: event.message_id || '', word: event.word || '', word_index: event.word_index })
   })
 
   agent.on('bot.finished', (event: any, call: Call) => {
@@ -509,10 +511,24 @@ Si el acceso es denegado:
 
 ## USO DE HERRAMIENTAS — CRÍTICO
 
-### REGLA DE ORO: PRIMERO HABLA, LUEGO LLAMA A LA HERRAMIENTA
-Esto es un canal de voz. El visitante oye SOLO tu texto. Si llamas a una herramienta sin texto, hay silencio total.
-En cada turno donde necesites una herramienta, tu respuesta SIEMPRE debe tener PRIMERO el texto hablado y DESPUÉS la llamada a la herramienta.
-NUNCA generes una llamada a herramienta sin haber escrito texto antes en el mismo turno.
+### REGLA ABSOLUTA: SIEMPRE INCLUYE TEXTO ANTES DE UNA HERRAMIENTA
+Esto es un canal de voz. El visitante SOLO oye tu texto. Si llamas a una herramienta sin texto, el visitante oye SILENCIO TOTAL durante varios segundos. Esto es INACEPTABLE.
+
+OBLIGATORIO en CADA turno donde uses una herramienta:
+1. PRIMERO escribe el texto hablado (la frase que oirá el visitante).
+2. DESPUÉS invoca la herramienta.
+
+PROHIBIDO: llamar a una herramienta sin haber escrito texto en el mismo turno.
+PROHIBIDO: un turno que contenga SOLO una llamada a herramienta sin texto.
+
+EJEMPLO CORRECTO:
+- Texto: "Perfecto, Juan. Permítame registrarlo."
+- Tool call: identifyVisitor({ name: "Juan" })
+
+EJEMPLO INCORRECTO (PROHIBIDO):
+- Tool call: identifyVisitor({ name: "Juan" })
+- (sin texto — el visitante oye silencio)
+
 NUNCA escribas el nombre de una función ni sus parámetros como parte de tu texto hablado.
 Las herramientas se invocan mediante el mecanismo de function calling de la API, NUNCA escribiéndolas como texto.
 

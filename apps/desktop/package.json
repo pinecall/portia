@@ -13,6 +13,7 @@
     "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
+    "@pinecall/core": "^0.0.1-beta.7",
     "@pinecall/zenitel-client": "^0.0.1-beta.0",
     "@types/ws": "^8.18.1",
     "electron-updater": "^6.3.0",

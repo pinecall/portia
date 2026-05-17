@@ -54,13 +54,14 @@ body {
   background: linear-gradient(145deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
-  margin: 0 auto;
   font-size: 24px; font-weight: 700; color: white;
   letter-spacing: -1px;
   line-height: 1;
   box-shadow: 0 4px 24px rgba(99, 102, 241, 0.25), inset 0 1px 0 rgba(255,255,255,0.15);
   user-select: none;
 }
+.boot-screen .boot-logo,
+.wizard .boot-logo { margin: 0 auto; }
 .boot-logo.sm {
   width: 28px; height: 28px; border-radius: 8px;
   font-size: 14px; letter-spacing: -0.5px;
