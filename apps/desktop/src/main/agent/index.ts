@@ -13,7 +13,7 @@ import { Pinecall } from '@pinecall/core'
 import type { Agent } from '@pinecall/core'
 import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '../db'
-import type { ZenitelClient } from 'zenitel-client'
+import type { ZenitelClient } from 'zenitel'
 import * as ToolDefs from './tools'
 
 // ── Agent ID ─────────────────────────────────────────────────────────────
