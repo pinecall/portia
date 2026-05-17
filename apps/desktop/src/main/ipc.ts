@@ -2,12 +2,17 @@
  * Portia — IPC Handlers
  *
  * Maps renderer invoke calls to main process operations.
- * All zenitel-client calls go through here.
+ * All tciv-client calls go through here.
  */
 
 import { ipcMain, BrowserWindow } from 'electron'
 import { TcivClient, scanNetwork } from 'tciv-client'
 import type { PortiaDB } from './db'
+
+// Cointel.es org — owns the SIP domain used by Portia
+const DEFAULT_API_KEY = 'pk_65ecdd0b6a90eed59dd3b394867671f4bb72091beb54430c'
+const DEFAULT_SIP_DOMAIN = 'testing-mo16m3gw.sip.twilio.com'
+const DEFAULT_SERVER_URL = 'https://voice.pinecall.io'
 
 export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   // ── Zenitel ───────────────────────────────────────────────────────────
@@ -178,9 +183,9 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('sip:check-ip', async (_, opts: { ip: string }) => {
     const config = db.getConfig()
-    const domain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
-    const apiKey = config.pinecallApiKey
-    const serverUrl = config.pinecallServerUrl || 'https://voice.pinecall.io'
+    const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
+    const apiKey = config.pinecallApiKey || DEFAULT_API_KEY
+    const serverUrl = config.pinecallServerUrl || DEFAULT_SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
@@ -201,9 +206,9 @@ export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('sip:whitelist-ip', async (_, opts: { ip: string; name?: string }) => {
     const config = db.getConfig()
-    const domain = config.sipDomain || 'testing-mo16m3gw.sip.twilio.com'
-    const apiKey = config.pinecallApiKey
-    const serverUrl = config.pinecallServerUrl || 'https://voice.pinecall.io'
+    const domain = config.sipDomain || DEFAULT_SIP_DOMAIN
+    const apiKey = config.pinecallApiKey || DEFAULT_API_KEY
+    const serverUrl = config.pinecallServerUrl || DEFAULT_SERVER_URL
 
     if (!apiKey) return { error: 'No API key configured' }
 
