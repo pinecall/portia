@@ -54,6 +54,7 @@ body {
   background: linear-gradient(145deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
   border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
   font-size: 24px; font-weight: 700; color: white;
   letter-spacing: -1px;
   line-height: 1;
@@ -302,6 +303,21 @@ body {
 .camera-feed img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
+.camera-feed.live {
+  position: relative;
+  max-height: 240px;
+  border: 1px solid var(--surface-3);
+}
+.camera-live-badge {
+  position: absolute; top: 8px; left: 8px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 4px;
+  background: rgba(248, 113, 113, 0.9);
+  color: white; font-size: 10px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  animation: pulse-status 2s ease infinite;
+}
+.call-left { display: flex; flex-direction: column; gap: 0; }
 
 /* Page header */
 .page-header {

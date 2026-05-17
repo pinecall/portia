@@ -469,25 +469,41 @@ function LiveCallView({ call, config }: { call: any; config: any }) {
       </div>
 
       <div className="two-col">
-        {/* Visitor Badge */}
-        <div className="info-section">
-          <h2>Visitor</h2>
-          <div className="visitor-badge">
-            <BadgeField icon={User} label="Name" value={extracted.name} />
-            <BadgeField icon={Building2} label="Company" value={extracted.company} />
-            <BadgeField icon={UserCheck} label="Visiting" value={extracted.host} />
-            <div className="badge-code">
-              <span className="info-label">Access Code</span>
-              <div className="code-digits">
-                {[0,1,2,3,4].map(i => {
-                  const d = (extracted.code || '')[i]
-                  return <div key={i} className={`code-digit ${d ? 'filled' : ''}`}>{d || ''}</div>
-                })}
-              </div>
+        {/* Camera + Visitor Badge */}
+        <div className="call-left">
+          {/* Live camera feed */}
+          <div className="info-section">
+            <h2>Camera</h2>
+            <div className="camera-feed live">
+              <img
+                src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || 'alphaadmin'}`}
+                alt="Visitor"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              />
+              {isLive && <div className="camera-live-badge"><CircleDot size={10} /> LIVE</div>}
             </div>
-            <div className={`badge-door ${doorOpen ? 'open' : ''}`}>
-              <DoorOpen size={16} />
-              <span>{doorOpen ? 'Door Open' : stage >= 5 ? 'Verifying...' : 'Door Locked'}</span>
+          </div>
+
+          {/* Visitor Badge */}
+          <div className="info-section">
+            <h2>Visitor</h2>
+            <div className="visitor-badge">
+              <BadgeField icon={User} label="Name" value={extracted.name} />
+              <BadgeField icon={Building2} label="Company" value={extracted.company} />
+              <BadgeField icon={UserCheck} label="Visiting" value={extracted.host} />
+              <div className="badge-code">
+                <span className="info-label">Access Code</span>
+                <div className="code-digits">
+                  {[0,1,2,3,4].map(i => {
+                    const d = (extracted.code || '')[i]
+                    return <div key={i} className={`code-digit ${d ? 'filled' : ''}`}>{d || ''}</div>
+                  })}
+                </div>
+              </div>
+              <div className={`badge-door ${doorOpen ? 'open' : ''}`}>
+                <DoorOpen size={16} />
+                <span>{doorOpen ? 'Door Open' : stage >= 5 ? 'Verifying...' : 'Door Locked'}</span>
+              </div>
             </div>
           </div>
         </div>
