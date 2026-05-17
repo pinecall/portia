@@ -9,6 +9,7 @@ import type { Agent, Call } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
 import type { ToolContext } from '@main/agent/tools/types'
 import { executeTool } from '@main/agent/tools/registry'
+import { saveVisitToDB } from '@main/db/repos/visit-recorder'
 
 interface WireOptions {
   agent: Agent
@@ -33,8 +34,6 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
   agent.on('call.ended', (call: Call, reason: string) => {
     console.log(`[agent] Call ended: ${call.id} reason=${reason}`)
     emit('call.ended', { call_id: call.id, reason })
-    // Visit recording is handled by visit-recorder (Phase 4)
-    const { saveVisitToDB } = require('@main/db/repos/visit-recorder')
     saveVisitToDB(call, reason, db)
   })
 
