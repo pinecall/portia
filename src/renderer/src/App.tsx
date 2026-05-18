@@ -730,12 +730,10 @@ function AgentSettings({ config }: { config: any }) {
   const onPresetChange = async (preset: string) => {
     if (preset === 'custom') return // Can't select "custom" directly
     setPromptPreset(preset)
-    setPromptLoading(true)
     const tpl = await window.portia.invoke('prompt:get-template', preset)
     setPromptText(tpl)
     setDefaultPrompt(tpl)
     setPromptDirty(false)
-    setPromptLoading(false)
     save({ promptPreset: preset, customPrompt: null })
   }
 
