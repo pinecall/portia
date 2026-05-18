@@ -76,22 +76,22 @@ export function closeDb(): void {
 
 // ── Query helpers ────────────────────────────────────────────────────────
 
-/** Run a SELECT and return all rows as objects. */
-export function queryAll(sql: string, params: unknown[] = []): Record<string, unknown>[] {
+/** Run a SELECT and return all rows as typed objects. */
+export function queryAll<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T[] {
   const results = getDb().exec(sql, params as any[])
   if (results.length === 0) return []
-  const { columns, values } = results[0]
+  const { columns, values } = results[0]!
   return values.map((row) => {
     const obj: Record<string, unknown> = {}
     columns.forEach((col, i) => (obj[col] = row[i]))
-    return obj
+    return obj as T
   })
 }
 
 /** Run a SELECT and return the first row, or null. */
-export function queryOne(sql: string, params: unknown[] = []): Record<string, unknown> | null {
-  const rows = queryAll(sql, params)
-  return rows[0] || null
+export function queryOne<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T | null {
+  const rows = queryAll<T>(sql, params)
+  return rows[0] ?? null
 }
 
 /** Run a write statement (INSERT, UPDATE, DELETE) and schedule a save. */

@@ -27,23 +27,23 @@ export function buildKeyterms(db: PortiaDB): string[] {
 
   // Access code visitor names
   for (const c of db.getAccessCodes()) {
-    if ((c as any).visitor_name) {
-      terms.add((c as any).visitor_name)
-      addNameParts(terms, (c as any).visitor_name)
+    if (c.visitor_name) {
+      terms.add(c.visitor_name)
+      addNameParts(terms, c.visitor_name)
     }
-    if ((c as any).assigned_to) {
-      terms.add((c as any).assigned_to)
-      addNameParts(terms, (c as any).assigned_to)
+    if (c.assigned_to) {
+      terms.add(c.assigned_to)
+      addNameParts(terms, c.assigned_to)
     }
   }
 
   // Recent visitor names & companies (last 50)
   for (const v of db.getVisits(50)) {
-    if ((v as any).visitor_name && (v as any).visitor_name !== 'Unknown visitor') {
-      terms.add((v as any).visitor_name)
-      addNameParts(terms, (v as any).visitor_name)
+    if (v.visitor_name && v.visitor_name !== 'Unknown visitor') {
+      terms.add(v.visitor_name)
+      addNameParts(terms, v.visitor_name)
     }
-    if ((v as any).company) terms.add((v as any).company)
+    if (v.company) terms.add(v.company)
   }
 
   // Filter per Deepgram best practices
