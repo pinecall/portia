@@ -11,6 +11,12 @@ import type { ToolContext } from '@main/agent/tools/types'
 import { executeTool } from '@main/agent/tools/registry'
 import { saveVisitToDB } from '@main/db/repos/visit-recorder'
 
+// Event payload shapes from the voice server
+interface SpeechEvent { text?: string; message_id?: string }
+interface TurnEvent { probability?: number }
+interface BotEvent { message_id?: string; text?: string }
+interface BotWordEvent { message_id?: string; word?: string; word_index?: number }
+
 interface WireOptions {
   agent: Agent
   ctx: ToolContext
@@ -38,58 +44,58 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
   })
 
   // User speech
-  agent.on('user.speaking', (event: any, call: Call) => {
+  agent.on('user.speaking', (event: SpeechEvent, call: Call) => {
     console.log(`  👤 (interim): ${event.text || ''}`)
     emit('user.speaking', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
   })
 
-  agent.on('user.message', (event: any, call: Call) => {
+  agent.on('user.message', (event: SpeechEvent, call: Call) => {
     console.log(`  👤 User: ${event.text || ''}`)
     emit('user.message', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
   })
 
   // Turn detection
-  agent.on('turn.pause', (event: any, call: Call) => {
+  agent.on('turn.pause', (event: TurnEvent, call: Call) => {
     console.log(`  ⏸ Turn pause (prob=${event.probability?.toFixed(2) || '?'})`)
     emit('turn.pause', { call_id: call.id, probability: event.probability })
   })
 
-  agent.on('turn.end', (event: any, call: Call) => {
+  agent.on('turn.end', (event: TurnEvent, call: Call) => {
     console.log(`  ⏹ Turn end (prob=${event.probability?.toFixed(2) || '?'})`)
     emit('turn.end', { call_id: call.id, probability: event.probability })
   })
 
-  agent.on('turn.resumed', (event: any, call: Call) => {
+  agent.on('turn.resumed', (_event: unknown, call: Call) => {
     console.log(`  ▶ Turn resumed`)
     emit('turn.resumed', { call_id: call.id })
   })
 
   // Bot speech
-  agent.on('bot.speaking', (event: any, call: Call) => {
+  agent.on('bot.speaking', (event: BotEvent, call: Call) => {
     console.log(`  🤖 Speaking: msg=${event.message_id}`)
     emit('bot.speaking', { call_id: call.id, message_id: event.message_id || '', text: event.text || '' })
   })
 
-  agent.on('bot.word', (event: any, call: Call) => {
+  agent.on('bot.word', (event: BotWordEvent, call: Call) => {
     emit('bot.word', { call_id: call.id, message_id: event.message_id || '', word: event.word || '', word_index: event.word_index })
   })
 
-  agent.on('bot.finished', (event: any, call: Call) => {
+  agent.on('bot.finished', (event: BotEvent, call: Call) => {
     console.log(`  🤖 Finished: msg=${event.message_id}`)
     emit('bot.finished', { call_id: call.id, message_id: event.message_id || '' })
   })
 
-  agent.on('bot.interrupted', (event: any, call: Call) => {
+  agent.on('bot.interrupted', (event: BotEvent, call: Call) => {
     console.log(`  🤖 Interrupted: msg=${event.message_id}`)
     emit('bot.interrupted', { call_id: call.id, message_id: event.message_id || '' })
   })
 
   // Tool calls — execute locally, send results back to server
-  agent.on('llm.tool_call' as any, async (call: Call, data: any) => {
-    const toolCalls = data?.tool_calls as Array<{ id: string; name: string; arguments: string }>
+  agent.on('llm.tool_call', async (call: Call, data) => {
+    const toolCalls = data?.tool_calls
     if (!toolCalls) return
 
-    const msgId = data.msg_id as string
+    const msgId = data.msg_id
     console.log(`  🔧 Tools: ${toolCalls.map(tc => tc.name).join(', ')} (msg=${msgId})`)
     emit('llm.tool_call', { call_id: call.id, tool_calls: toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' })) })
 
@@ -99,8 +105,8 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
       try {
         const args = JSON.parse(tc.arguments || '{}')
         result = await executeTool(tc.name, args, call, ctx)
-      } catch (err: any) {
-        result = { error: err.message }
+      } catch (err: unknown) {
+        result = { error: err instanceof Error ? err.message : String(err) }
       }
       console.log(`  ✅ ${tc.name}: ${JSON.stringify(result).slice(0, 100)}`)
       emit('llm.tool_result', { call_id: call.id, result: JSON.stringify(result) })
