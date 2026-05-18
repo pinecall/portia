@@ -76,6 +76,11 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
         }
         if (updates.agentTurnDetection) body.turn_detection = updates.agentTurnDetection
         if (updates.language) body.language = updates.language
+        // Hot-reload prompt if preset or custom prompt changed
+        if (updates.promptPreset || updates.customPrompt) {
+          const { getPromptTemplate } = await import('@main/agent/prompt/builder')
+          body.llm = { ...body.llm, instructions: getPromptTemplate(db) }
+        }
         if (Object.keys(body).length) {
           state.agent.configure(body)
           console.log('[ipc] Agent config hot-reloaded:', Object.keys(body).join(', '))
@@ -86,6 +91,18 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     }
 
     return { ok: true }
+  })
+
+  // ── Prompt Presets ────────────────────────────────────────────────────
+
+  ipcMain.handle('prompt:get-presets', async () => {
+    const { PROMPT_PRESETS } = await import('@main/agent/prompt/builder')
+    return Object.keys(PROMPT_PRESETS)
+  })
+
+  ipcMain.handle('prompt:get-template', async (_, preset: string) => {
+    const { getPresetTemplate } = await import('@main/agent/prompt/builder')
+    return getPresetTemplate(preset)
   })
 
   // ── Voices ─────────────────────────────────────────────────────────────

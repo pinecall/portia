@@ -701,6 +701,69 @@ function AgentSettings({ config }: { config: any }) {
   const [saveStatus, setSaveStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const saveTimer = useRef<any>(null)
 
+  // ── Prompt state ──────────────────────────────────────────────────────
+  const [promptPreset, setPromptPreset] = useState(config.promptPreset || 'openai')
+  const [promptText, setPromptText] = useState('')
+  const [promptDirty, setPromptDirty] = useState(false)
+  const [promptLoading, setPromptLoading] = useState(true)
+  const [defaultPrompt, setDefaultPrompt] = useState('')
+
+  // Load initial prompt
+  useEffect(() => {
+    (async () => {
+      setPromptLoading(true)
+      if (config.promptPreset === 'custom' && config.customPrompt) {
+        setPromptText(config.customPrompt)
+        // Load the preset it was based on for reset
+        const tpl = await window.portia.invoke('prompt:get-template', 'openai')
+        setDefaultPrompt(tpl)
+      } else {
+        const preset = config.promptPreset || 'openai'
+        const tpl = await window.portia.invoke('prompt:get-template', preset)
+        setPromptText(tpl)
+        setDefaultPrompt(tpl)
+      }
+      setPromptLoading(false)
+    })()
+  }, [])
+
+  const onPresetChange = async (preset: string) => {
+    if (preset === 'custom') return // Can't select "custom" directly
+    setPromptPreset(preset)
+    setPromptLoading(true)
+    const tpl = await window.portia.invoke('prompt:get-template', preset)
+    setPromptText(tpl)
+    setDefaultPrompt(tpl)
+    setPromptDirty(false)
+    setPromptLoading(false)
+    save({ promptPreset: preset, customPrompt: null })
+  }
+
+  const onPromptEdit = (text: string) => {
+    setPromptText(text)
+    setPromptDirty(text !== defaultPrompt)
+  }
+
+  const savePrompt = () => {
+    if (promptDirty) {
+      setPromptPreset('custom')
+      save({ promptPreset: 'custom', customPrompt: promptText })
+      setPromptDirty(false)
+    } else {
+      save({ promptPreset: promptPreset, customPrompt: null })
+    }
+  }
+
+  const resetPrompt = async () => {
+    const preset = promptPreset === 'custom' ? 'openai' : promptPreset
+    const tpl = await window.portia.invoke('prompt:get-template', preset)
+    setPromptText(tpl)
+    setDefaultPrompt(tpl)
+    setPromptPreset(preset)
+    setPromptDirty(false)
+    save({ promptPreset: preset, customPrompt: null })
+  }
+
   // Resolve voice name on mount and when voice changes
   useEffect(() => {
     if (!voice) { setVoiceName(''); return }
@@ -809,6 +872,57 @@ function AgentSettings({ config }: { config: any }) {
             </select>
           </div>
         </div>
+      </div>
+
+      {/* ── Prompt Editor ─────────────────────────────────────────────────── */}
+      <div className="info-section">
+        <div className="prompt-header">
+          <h2>System Prompt</h2>
+          <div className="prompt-presets">
+            {['openai', 'mistral'].map(p => (
+              <button
+                key={p}
+                className={`prompt-preset-btn ${promptPreset === p ? 'active' : ''} ${promptPreset === 'custom' && p === 'openai' ? '' : ''}`}
+                onClick={() => onPresetChange(p)}
+              >
+                {p === 'openai' ? 'OpenAI' : 'Mistral'}
+              </button>
+            ))}
+            {promptPreset === 'custom' && (
+              <span className="prompt-preset-badge">Custom</span>
+            )}
+          </div>
+        </div>
+        {promptLoading ? (
+          <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>
+            <Loader2 size={16} className="spin" style={{ display: 'inline', verticalAlign: -3, marginRight: 6 }} />
+            Loading prompt...
+          </div>
+        ) : (
+          <>
+            <textarea
+              className="prompt-textarea"
+              value={promptText}
+              onChange={e => onPromptEdit(e.target.value)}
+              spellCheck={false}
+            />
+            <div className="prompt-footer">
+              <span className="prompt-charcount">{promptText.length.toLocaleString()} chars</span>
+              <div className="prompt-actions">
+                <button className="btn-ghost btn-sm" onClick={resetPrompt}>
+                  <RefreshCw size={12} /> Reset to default
+                </button>
+                <button
+                  className="btn-primary btn-sm"
+                  onClick={savePrompt}
+                  disabled={!promptDirty && promptPreset !== 'custom'}
+                >
+                  {promptDirty ? 'Save & Apply' : 'Applied'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       <p className="settings-hint" style={{ marginTop: -8 }}>Changes apply to the current session. Restart the agent to reset to defaults.</p>

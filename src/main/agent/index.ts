@@ -61,7 +61,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
   await pc.connect()
 
   const agentId = getAgentId(opts.db)
-  const promptTemplate = getPromptTemplate()
+  const promptTemplate = getPromptTemplate(opts.db)
   const promptVars = getPromptVars(opts.db)
   const greeting = buildGreeting(opts.db)
   const tools = toolSchemas()

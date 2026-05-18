@@ -29,6 +29,9 @@ export interface AppConfig {
   agentSttProvider?: string | null
   agentTtsProvider?: string | null
   agentTurnDetection?: string | null
+  // Prompt customization
+  promptPreset?: string | null  // 'openai' | 'mistral' | 'custom'
+  customPrompt?: string | null
 }
 
 // ── Team ─────────────────────────────────────────────────────────────────

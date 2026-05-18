@@ -4,15 +4,34 @@
  * The template uses {{building}}, {{team}}, {{codes}}, {{date}}, {{time}}
  * as placeholders. The server resolves {{date}} and {{time}} automatically.
  * We send {{building}}, {{team}}, {{codes}} via call.setPromptVars().
+ *
+ * Supports presets: 'openai' (default), 'mistral', 'custom'.
  */
 
 // Vite inlines the .md content as a string at build time — no fs.readFileSync needed
-import template from './template.md?raw'
+import openaiTemplate from './template.md?raw'
+import mistralTemplate from './template-mistral.md?raw'
 import type { PortiaDB } from '@main/db'
 
-/** Return the raw prompt template (with {{placeholders}} intact). */
-export function getPromptTemplate(): string {
-  return template
+/** Built-in preset templates. */
+export const PROMPT_PRESETS: Record<string, string> = {
+  openai: openaiTemplate,
+  mistral: mistralTemplate,
+}
+
+/** Return the raw prompt template based on config preset. */
+export function getPromptTemplate(db?: PortiaDB): string {
+  if (!db) return openaiTemplate
+  const config = db.getConfig()
+  if (config.promptPreset === 'custom' && config.customPrompt) {
+    return config.customPrompt
+  }
+  return PROMPT_PRESETS[config.promptPreset || 'openai'] || openaiTemplate
+}
+
+/** Return a specific preset template by name. */
+export function getPresetTemplate(preset: string): string {
+  return PROMPT_PRESETS[preset] || openaiTemplate
 }
 
 /** Build the prompt vars object for call.setPromptVars(). */

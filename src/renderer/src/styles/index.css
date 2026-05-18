@@ -726,4 +726,59 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 
+/* ── Prompt Editor ──────────────────────────────────────────────────── */
+.prompt-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.prompt-header h2 { margin-bottom: 0 !important; }
 
+.prompt-presets {
+  display: flex; align-items: center; gap: 4px;
+}
+.prompt-preset-btn {
+  padding: 4px 12px; border-radius: var(--r-sm);
+  font: 500 11px var(--font); color: var(--ink-3);
+  background: var(--surface-2); border: 1px solid var(--surface-3);
+  cursor: pointer; transition: all var(--transition);
+}
+.prompt-preset-btn:hover { color: var(--ink-2); border-color: rgba(129,140,248,0.2); }
+.prompt-preset-btn.active {
+  color: var(--accent); background: var(--accent-dim);
+  border-color: rgba(129,140,248,0.25);
+}
+.prompt-preset-badge {
+  padding: 3px 10px; border-radius: var(--r-sm);
+  font: 600 10px var(--font); color: var(--amber);
+  background: var(--amber-dim); letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.prompt-textarea {
+  width: 100%; min-height: 320px; max-height: 500px;
+  padding: 16px; resize: vertical;
+  background: var(--bg); border: 1px solid var(--surface-3);
+  border-radius: var(--r);
+  color: var(--ink-2); font: 400 12px/1.6 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  outline: none; tab-size: 2;
+  scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent;
+  transition: border-color var(--transition);
+}
+.prompt-textarea:focus {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.prompt-textarea::selection {
+  background: rgba(129, 140, 248, 0.25);
+}
+
+.prompt-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; padding: 0 2px;
+}
+.prompt-charcount {
+  font: 400 11px var(--font); color: var(--ink-3);
+}
+.prompt-actions {
+  display: flex; align-items: center; gap: 6px;
+}
