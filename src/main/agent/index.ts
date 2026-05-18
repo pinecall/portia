@@ -88,6 +88,14 @@ export async function createAgent(opts: PortiaAgentOptions) {
     turnDetection: 'native',
   })
 
+  // Twilio phone number for testing via real phone calls
+  agent.addChannel('phone', '+17438373786', {
+    voice: opts.voice || ENV.VOICE_ID,
+    language: opts.language || 'es',
+    stt: sttConfig,
+    turnDetection: 'native',
+  })
+
   // Emit helper
   const emit = (event: string, data: Record<string, unknown>) => {
     try {

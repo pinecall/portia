@@ -37,6 +37,9 @@ export interface CallMessage {
   text: string
   time: Date
   isInterim?: boolean
+  finalized?: boolean
+  status?: 'pause' | 'end' | null
+  probability?: number
   toolName?: string
   messageId?: string
   words?: string[]
@@ -200,6 +203,45 @@ export function useAgent() {
           } else {
             messages.push({ role: 'user', text: ev.text, time: new Date(), isInterim: false })
           }
+          return { ...prev, messages }
+        })
+        return
+      }
+
+      // turn.pause — mark last user message as paused (yellow)
+      if (event === 'turn.pause') {
+        setLiveCall(prev => {
+          if (!prev || prev.id !== callId) return prev
+          const messages = [...prev.messages]
+          const idx = messages.findLastIndex(m => m.role === 'user' && !m.finalized)
+          if (idx < 0) return prev
+          messages[idx] = { ...messages[idx], status: 'pause', probability: ev.probability, isInterim: false }
+          return { ...prev, messages }
+        })
+        return
+      }
+
+      // turn.end — mark last user message as finalized (green)
+      if (event === 'turn.end') {
+        setLiveCall(prev => {
+          if (!prev || prev.id !== callId) return prev
+          const messages = [...prev.messages]
+          const idx = messages.findLastIndex(m => m.role === 'user' && !m.finalized)
+          if (idx < 0) return prev
+          messages[idx] = { ...messages[idx], status: 'end', probability: ev.probability, finalized: true, isInterim: false }
+          return { ...prev, messages }
+        })
+        return
+      }
+
+      // turn.resumed — clear pause status, user is still speaking
+      if (event === 'turn.resumed') {
+        setLiveCall(prev => {
+          if (!prev || prev.id !== callId) return prev
+          const messages = [...prev.messages]
+          const idx = messages.findLastIndex(m => m.role === 'user' && !m.finalized)
+          if (idx < 0) return prev
+          messages[idx] = { ...messages[idx], status: null, finalized: false }
           return { ...prev, messages }
         })
         return

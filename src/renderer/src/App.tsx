@@ -862,9 +862,24 @@ function LiveCallView({ call, config }: { call: any; config: any }) {
           <h2>Transcript</h2>
           <div className="chat-feed" ref={chatRef}>
             {messages.filter((m: any) => m.role === 'user' || m.role === 'bot').map((m: any, i: number) => (
-              <div key={i} className={`chat-bubble ${m.role}`}>
+              <div key={i} className={`chat-bubble ${m.role}${m.isInterim ? ' interim' : ''}${m.interrupted ? ' interrupted' : ''}${m.status === 'pause' ? ' turn-pause' : ''}${m.status === 'end' ? ' turn-end' : ''}`}>
                 <span className="chat-role">{m.role === 'user' ? 'Visitor' : 'Agent'}</span>
                 <span className="chat-text">{m.text}</span>
+                {m.role === 'user' && m.status === 'pause' && (
+                  <span className="turn-badge pause" title={`Pause probability: ${((m.probability || 0) * 100).toFixed(0)}%`}>PAUSE</span>
+                )}
+                {m.role === 'user' && m.status === 'end' && (
+                  <span className="turn-badge end">END</span>
+                )}
+                {m.role === 'user' && m.isInterim && !m.status && (
+                  <span className="turn-badge listening">…</span>
+                )}
+                {m.role === 'bot' && m.interrupted && (
+                  <span className="turn-badge barge-in">INTERRUPTED</span>
+                )}
+                {m.role === 'bot' && m.speaking && (
+                  <span className="turn-badge speaking">SPEAKING</span>
+                )}
               </div>
             ))}
             {messages.length === 0 && (

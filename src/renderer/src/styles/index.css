@@ -435,6 +435,10 @@ body {
   display: flex; flex-direction: column; gap: 6px;
   scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent;
 }
+.live-call .chat-feed { max-height: none; flex: 1; min-height: 0; }
+.live-call .two-col { flex: 1; min-height: 0; }
+.live-call .two-col > .info-section { display: flex; flex-direction: column; min-height: 0; }
+.live-call.page { display: flex; flex-direction: column; height: 100%; }
 .chat-bubble {
   display: flex; flex-direction: column; gap: 2px;
   padding: 8px 12px; border-radius: var(--r-sm);
@@ -446,6 +450,27 @@ body {
 .chat-bubble.bot .chat-role { color: var(--accent); }
 .chat-text { font-size: 13px; line-height: 1.4; }
 .chat-empty { text-align: center; color: var(--ink-3); padding: 40px 0; font-size: 12px; }
+
+/* Turn detection & barge-in badges */
+.chat-bubble.interim { opacity: 0.7; }
+.chat-bubble.interim .chat-text { font-style: italic; }
+.chat-bubble.turn-pause { border-left: 2px solid var(--amber); }
+.chat-bubble.turn-end { border-left: 2px solid var(--green); }
+.chat-bubble.interrupted { border-left: 2px solid var(--red); opacity: 0.75; }
+.chat-bubble.interrupted .chat-text { text-decoration: line-through; text-decoration-color: rgba(248,113,113,0.4); }
+
+.turn-badge {
+  display: inline-block;
+  padding: 1px 6px; border-radius: 3px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.5px; text-transform: uppercase;
+  margin-top: 2px; align-self: flex-start;
+}
+.turn-badge.pause { background: var(--amber-dim); color: var(--amber); }
+.turn-badge.end { background: var(--green-dim); color: var(--green); }
+.turn-badge.barge-in { background: rgba(248,113,113,0.1); color: var(--red); }
+.turn-badge.listening { color: var(--ink-3); font-size: 14px; font-weight: 400; animation: pulse-status 1.5s ease infinite; }
+.turn-badge.speaking { background: var(--accent-dim); color: var(--accent); animation: pulse-status 1.5s ease infinite; }
 
 /* ── CRUD Tables ─────────────────────────────────────────────────────── */
 .crud-table-wrap { overflow-x: auto; border-radius: var(--r); border: 1px solid var(--surface-3); }

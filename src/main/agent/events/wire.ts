@@ -48,6 +48,22 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
     emit('user.message', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
   })
 
+  // Turn detection
+  agent.on('turn.pause', (event: any, call: Call) => {
+    console.log(`  ⏸ Turn pause (prob=${event.probability?.toFixed(2) || '?'})`)
+    emit('turn.pause', { call_id: call.id, probability: event.probability })
+  })
+
+  agent.on('turn.end', (event: any, call: Call) => {
+    console.log(`  ⏹ Turn end (prob=${event.probability?.toFixed(2) || '?'})`)
+    emit('turn.end', { call_id: call.id, probability: event.probability })
+  })
+
+  agent.on('turn.resumed', (event: any, call: Call) => {
+    console.log(`  ▶ Turn resumed`)
+    emit('turn.resumed', { call_id: call.id })
+  })
+
   // Bot speech
   agent.on('bot.speaking', (event: any, call: Call) => {
     console.log(`  🤖 Speaking: msg=${event.message_id}`)
