@@ -56,6 +56,51 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     }
   })
 
+  ipcMain.handle('agent:configure', async (_, updates: Record<string, any>) => {
+    // 1. Persist to DB
+    db.updateConfig(updates)
+
+    // 2. Hot-reload live agent
+    try {
+      const { getAgentState } = await import('@main/agent/bootstrap')
+      const state = getAgentState()
+      if (state?.agent) {
+        const body: Record<string, any> = {}
+        if (updates.agentVoice) body.voice = updates.agentVoice
+        if (updates.agentSttProvider) body.stt = { provider: updates.agentSttProvider }
+        if (updates.agentLlmModel || updates.agentLlmEngine) {
+          body.llm = {
+            ...(updates.agentLlmModel && { model: updates.agentLlmModel }),
+            ...(updates.agentLlmEngine && { engine: updates.agentLlmEngine }),
+          }
+        }
+        if (updates.agentTurnDetection) body.turn_detection = updates.agentTurnDetection
+        if (updates.language) body.language = updates.language
+        if (Object.keys(body).length) {
+          state.agent.configure(body)
+          console.log('[ipc] Agent config hot-reloaded:', Object.keys(body).join(', '))
+        }
+      }
+    } catch (err: any) {
+      console.error('[ipc] Agent hot-reload failed:', err.message)
+    }
+
+    return { ok: true }
+  })
+
+  // ── Voices ─────────────────────────────────────────────────────────────
+
+  ipcMain.handle('voices:list', async (_, opts: { provider?: string } = {}) => {
+    try {
+      const { fetchVoices } = await import('@pinecall/core')
+      const voices = await fetchVoices({ provider: opts.provider || 'elevenlabs' })
+      return { ok: true, voices }
+    } catch (err: any) {
+      console.error('[ipc] voices:list error:', err.message)
+      return { ok: false, error: err.message, voices: [] }
+    }
+  })
+
   // ── SIP IP Whitelisting ────────────────────────────────────────────────
 
   ipcMain.handle('sip:detect-ip', async () => {

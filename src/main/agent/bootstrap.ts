@@ -44,7 +44,13 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
       sipUri,
       db,
       zenitel,
+      voice: config.agentVoice || undefined,
       language: config.language || 'es',
+      llmEngine: config.agentLlmEngine || undefined,
+      llmModel: config.agentLlmModel || undefined,
+      sttProvider: config.agentSttProvider || undefined,
+      ttsProvider: config.agentTtsProvider || undefined,
+      turnDetection: config.agentTurnDetection || undefined,
       onCallEvent: (event) => {
         window.webContents.send('portia:call-event', event)
       },
@@ -72,6 +78,10 @@ export async function stopAgent(): Promise<void> {
 
 export function getAgentStatus(): { running: boolean } {
   return { running: !!agentState }
+}
+
+export function getAgentState() {
+  return agentState
 }
 
 /**

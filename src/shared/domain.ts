@@ -22,6 +22,13 @@ export interface AppConfig {
   agentId?: string | null
   sipId?: string | null
   sipDomain?: string | null
+  // Agent voice/AI config
+  agentVoice?: string | null
+  agentLlmEngine?: string | null
+  agentLlmModel?: string | null
+  agentSttProvider?: string | null
+  agentTtsProvider?: string | null
+  agentTurnDetection?: string | null
 }
 
 // ── Team ─────────────────────────────────────────────────────────────────

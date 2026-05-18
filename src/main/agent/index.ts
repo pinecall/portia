@@ -46,6 +46,11 @@ interface PortiaAgentOptions {
   zenitel: TcivClient
   voice?: string
   language?: string
+  llmEngine?: string
+  llmModel?: string
+  sttProvider?: string
+  ttsProvider?: string
+  turnDetection?: string
   onCallEvent?: (event: any) => void
 }
 
@@ -61,18 +66,24 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const greeting = buildGreeting(opts.db)
   const tools = toolSchemas()
   const keyterms = buildKeyterms(opts.db)
-  const sttConfig = { provider: 'deepgram-flux', keyterms }
+  const sttProvider = opts.sttProvider || 'deepgram-flux'
+  const sttConfig = { provider: sttProvider, keyterms }
 
-  console.log(`[agent] ID: ${agentId} | Template: ${promptTemplate.length} chars | Phone: ${opts.sipUri}`)
+  const llmEngine = opts.llmEngine || 'openai'
+  const llmModel = opts.llmModel || ENV.LLM_MODEL
+  const turnDetection = opts.turnDetection || 'native'
+  const voice = opts.voice || ENV.VOICE_ID
+
+  console.log(`[agent] ID: ${agentId} | LLM: ${llmEngine}/${llmModel} | STT: ${sttProvider} | TD: ${turnDetection} | Phone: ${opts.sipUri}`)
 
   const agent = pc.agent(agentId, {
-    voice: opts.voice || ENV.VOICE_ID,
+    voice,
     language: opts.language || 'es',
     stt: sttConfig,
-    turnDetection: 'native',
+    turnDetection,
     llm: {
-      engine: 'openai',
-      model: ENV.LLM_MODEL,
+      engine: llmEngine,
+      model: llmModel,
       enabled: true,
       instructions: promptTemplate,
       vars: promptVars,
@@ -82,18 +93,18 @@ export async function createAgent(opts: PortiaAgentOptions) {
   })
 
   agent.addChannel('phone', opts.sipUri, {
-    voice: opts.voice || ENV.VOICE_ID,
+    voice,
     language: opts.language || 'es',
     stt: sttConfig,
-    turnDetection: 'native',
+    turnDetection,
   })
 
   // Twilio phone number for testing via real phone calls
   agent.addChannel('phone', '+17438373786', {
-    voice: opts.voice || ENV.VOICE_ID,
+    voice,
     language: opts.language || 'es',
     stt: sttConfig,
-    turnDetection: 'native',
+    turnDetection,
   })
 
   // Emit helper

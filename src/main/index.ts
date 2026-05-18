@@ -14,6 +14,7 @@ import { WebSocket } from 'ws'
 ;(globalThis as any).WebSocket = WebSocket
 
 import { app, BrowserWindow, shell, protocol } from 'electron'
+import { seedDemoData } from '@main/db/seed'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { PortiaDB } from '@main/db'
@@ -29,8 +30,8 @@ function createWindow(): BrowserWindow {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 16 },
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
+    ...(process.platform === 'darwin' ? { trafficLightPosition: { x: 16, y: 16 } } : {}),
     backgroundColor: '#0a0a0a',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -106,6 +107,12 @@ app.whenReady().then(async () => {
     db.updateConfig(updates)
     if (updates.agentPhone) console.log(`[Portia] Generated SIP ID: ${updates.agentPhone}`)
     Object.assign(config, updates)
+  }
+
+  // Auto-seed demo data on first launch (no building name = fresh install)
+  if (!config.buildingName) {
+    seedDemoData(db)
+    console.log('[Portia] First launch — seeded Cointel demo data')
   }
 
   // 3. Window

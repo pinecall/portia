@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   Search, Wifi, WifiOff, ChevronRight, ChevronLeft,
   Check, Loader2, Radio,
   LayoutDashboard, Users, Key, FileText, Camera, Settings,
   Shield, Clock, TrendingUp, DoorOpen, Activity,
   RefreshCw, CircleDot, Phone, User, Building2, UserCheck,
-  Volume2, Mic, ToggleLeft, ToggleRight, Loader2 as Spinner
+  Volume2, Mic, ToggleLeft, ToggleRight, Loader2 as Spinner,
+  Bot, Brain, Ear, Languages, Play, Square, X
 } from 'lucide-react'
 import { useZenitel } from './hooks/useZenitel'
 import { useAgent, useElapsed, STAGES } from './hooks/useAgent'
@@ -553,7 +554,7 @@ function DashboardPage({ zenitel, config }: any) {
 function SettingsPage({ config, zenitel }: any) {
   const [apiKey, setApiKey] = useState(config.pinecallApiKey || '')
   const [editing, setEditing] = useState(false)
-  const [tab, setTab] = useState<'general' | 'intercom'>('general')
+  const [tab, setTab] = useState<'general' | 'intercom' | 'agent'>('general')
 
   const resetWizard = async () => {
     await window.portia.invoke('config:reset-wizard')
@@ -574,6 +575,9 @@ function SettingsPage({ config, zenitel }: any) {
         </button>
         <button className={`settings-tab ${tab === 'intercom' ? 'active' : ''}`} onClick={() => setTab('intercom')}>
           <Volume2 size={14} /> Intercom
+        </button>
+        <button className={`settings-tab ${tab === 'agent' ? 'active' : ''}`} onClick={() => setTab('agent')}>
+          <Bot size={14} /> Agent
         </button>
       </div>
 
@@ -629,6 +633,372 @@ function SettingsPage({ config, zenitel }: any) {
       )}
 
       {tab === 'intercom' && <IntercomSettings online={zenitel.online} />}
+      {tab === 'agent' && <AgentSettings config={config} />}
+    </div>
+  )
+}
+
+// ── Agent Settings ───────────────────────────────────────────────────────
+
+const LLM_MODELS = [
+  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', engine: 'openai' },
+  { id: 'gpt-4.1', label: 'GPT-4.1', engine: 'openai' },
+  { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', engine: 'openai' },
+  { id: 'gpt-4o', label: 'GPT-4o', engine: 'openai' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', engine: 'openai' },
+  { id: 'mistral-small-latest', label: 'Mistral Small', engine: 'mistral' },
+  { id: 'mistral-medium-latest', label: 'Mistral Medium', engine: 'mistral' },
+  { id: 'mistral-large-latest', label: 'Mistral Large', engine: 'mistral' },
+]
+
+const STT_PROVIDERS = [
+  { id: 'deepgram-flux', label: 'Deepgram Flux', desc: 'Ultra-low latency' },
+  { id: 'deepgram', label: 'Deepgram Nova-3', desc: 'Best accuracy' },
+  { id: 'gladia', label: 'Gladia Solaria', desc: 'Arabic, Hebrew, multi-lang' },
+  { id: 'transcribe', label: 'AWS Transcribe', desc: 'Enterprise' },
+]
+
+const TTS_PROVIDERS = [
+  { id: 'elevenlabs', label: 'ElevenLabs' },
+  { id: 'cartesia', label: 'Cartesia Sonic-3' },
+  { id: 'openai', label: 'OpenAI' },
+  { id: 'polly', label: 'AWS Polly' },
+]
+
+const TURN_DETECTORS = [
+  { id: 'native', label: 'Native' },
+  { id: 'smart_turn', label: 'SmartTurn' },
+  { id: 'silence', label: 'Silence' },
+]
+
+const LANGUAGES = [
+  { id: 'es', label: 'Español' },
+  { id: 'en', label: 'English' },
+  { id: 'fr', label: 'Français' },
+  { id: 'de', label: 'Deutsch' },
+  { id: 'pt', label: 'Português' },
+  { id: 'it', label: 'Italiano' },
+  { id: 'ar', label: 'العربية' },
+  { id: 'nl', label: 'Nederlands' },
+  { id: 'pl', label: 'Polski' },
+  { id: 'tr', label: 'Türkçe' },
+]
+
+const VOICE_PROVIDERS = [
+  { id: 'elevenlabs', label: 'ElevenLabs' },
+  { id: 'cartesia', label: 'Cartesia' },
+]
+
+function AgentSettings({ config }: { config: any }) {
+  const [voice, setVoice] = useState(config.agentVoice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7')
+  const [voiceName, setVoiceName] = useState('')
+  const [llmModel, setLlmModel] = useState(config.agentLlmModel || 'gpt-4.1-mini')
+  const [sttProvider, setSttProvider] = useState(config.agentSttProvider || 'deepgram-flux')
+  const [ttsProvider, setTtsProvider] = useState(config.agentTtsProvider || 'elevenlabs')
+  const [turnDetection, setTurnDetection] = useState(config.agentTurnDetection || 'native')
+  const [language, setLanguage] = useState(config.language || 'es')
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<{ ok: boolean; msg: string } | null>(null)
+  const saveTimer = useRef<any>(null)
+
+  // Resolve voice name on mount and when voice changes
+  useEffect(() => {
+    if (!voice) { setVoiceName(''); return }
+    const parts = voice.split(':')
+    if (parts.length < 2) { setVoiceName(voice); return }
+    const [prov, voiceId] = parts
+    window.portia.invoke('voices:list', { provider: prov })
+      .then((res: any) => {
+        if (res.ok) {
+          const found = res.voices.find((v: any) => v.id === voiceId)
+          setVoiceName(found?.name || voiceId)
+        } else {
+          setVoiceName(voiceId)
+        }
+      })
+      .catch(() => setVoiceName(voiceId))
+  }, [voice])
+
+  const save = useCallback(async (updates: Record<string, any>) => {
+    try {
+      await window.portia.invoke('agent:configure', updates)
+      setSaveStatus({ ok: true, msg: 'Session updated' })
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => setSaveStatus(null), 2000)
+    } catch (err: any) {
+      setSaveStatus({ ok: false, msg: err.message || 'Failed' })
+    }
+  }, [])
+
+  const onLlmChange = (v: string) => {
+    const model = LLM_MODELS.find(m => m.id === v)
+    setLlmModel(v)
+    save({ agentLlmModel: v, agentLlmEngine: model?.engine || 'openai' })
+  }
+  const onSttChange = (v: string) => { setSttProvider(v); save({ agentSttProvider: v }) }
+  const onTtsChange = (v: string) => { setTtsProvider(v); save({ agentTtsProvider: v }) }
+  const onTdChange = (v: string) => { setTurnDetection(v); save({ agentTurnDetection: v }) }
+  const onLangChange = (v: string) => { setLanguage(v); save({ language: v }) }
+
+  const onVoiceSelect = (voiceValue: string) => {
+    setVoice(voiceValue)
+    setShowVoiceModal(false)
+    save({ agentVoice: voiceValue })
+  }
+
+  const voiceProvider = voice.split(':')[0] || 'elevenlabs'
+
+  return (
+    <div className="agent-config">
+      <div className="info-section">
+        <h2>Model</h2>
+        <div className="agent-fields">
+          <div className="agent-field">
+            <label className="agent-field-label"><Brain size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />LLM Model</label>
+            <select className="agent-select" value={llmModel} onChange={e => onLlmChange(e.target.value)}>
+              <optgroup label="OpenAI">
+                {LLM_MODELS.filter(m => m.engine === 'openai').map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </optgroup>
+              <optgroup label="Mistral">
+                {LLM_MODELS.filter(m => m.engine === 'mistral').map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </optgroup>
+            </select>
+          </div>
+          <div className="agent-field">
+            <label className="agent-field-label"><Languages size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />Language</label>
+            <select className="agent-select" value={language} onChange={e => onLangChange(e.target.value)}>
+              {LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="info-section">
+        <h2>Voice &amp; Speech</h2>
+        <div className="agent-fields">
+          <div className="agent-field">
+            <label className="agent-field-label"><Volume2 size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />Voice</label>
+            <div className="agent-voice-row">
+              <div className="agent-voice-id" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ color: 'var(--ink)', fontSize: 13, fontFamily: 'var(--font)' }}>{voiceName || '...'}</span>
+                <span style={{ fontSize: 10, opacity: 0.5 }}>{voiceProvider} · {voice.split(':')[1]?.slice(0, 12)}…</span>
+              </div>
+              <button className="btn-primary btn-sm" onClick={() => setShowVoiceModal(true)}>Browse</button>
+            </div>
+          </div>
+
+          <div className="agent-two-col">
+            <div className="agent-field">
+              <label className="agent-field-label">TTS Provider</label>
+              <select className="agent-select" value={ttsProvider} onChange={e => onTtsChange(e.target.value)}>
+                {TTS_PROVIDERS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </select>
+            </div>
+            <div className="agent-field">
+              <label className="agent-field-label"><Ear size={11} style={{ display: 'inline', verticalAlign: -1, marginRight: 4 }} />STT Provider</label>
+              <select className="agent-select" value={sttProvider} onChange={e => onSttChange(e.target.value)}>
+                {STT_PROVIDERS.map(p => <option key={p.id} value={p.id}>{p.label}{p.desc ? ` — ${p.desc}` : ''}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="agent-field">
+            <label className="agent-field-label">Turn Detection</label>
+            <select className="agent-select" value={turnDetection} onChange={e => onTdChange(e.target.value)}>
+              {TURN_DETECTORS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <p className="settings-hint" style={{ marginTop: -8 }}>Changes apply to the current session. Restart the agent to reset to defaults.</p>
+
+      {saveStatus && (
+        <div className={`agent-save-status ${saveStatus.ok ? '' : 'error'}`}>
+          {saveStatus.ok ? <Check size={12} /> : <Activity size={12} />}
+          {saveStatus.msg}
+        </div>
+      )}
+
+      {showVoiceModal && (
+        <VoicePickerModal
+          currentVoice={voice}
+          onSelect={onVoiceSelect}
+          onClose={() => setShowVoiceModal(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Voice Picker Modal ───────────────────────────────────────────────────
+
+function VoicePickerModal({ currentVoice, onSelect, onClose }: {
+  currentVoice: string
+  onSelect: (voice: string) => void
+  onClose: () => void
+}) {
+  const [provider, setProvider] = useState(currentVoice.split(':')[0] || 'elevenlabs')
+  const [voices, setVoices] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  const loadVoices = useCallback(async (prov: string) => {
+    setLoading(true)
+    setError('')
+    setVoices([])
+    try {
+      const res = await window.portia.invoke('voices:list', { provider: prov })
+      if (res.ok) setVoices(res.voices)
+      else setError(res.error || 'Failed to load voices')
+    } catch (err: any) {
+      setError(err.message || 'Failed')
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    loadVoices(provider)
+    setTimeout(() => searchRef.current?.focus(), 150)
+  }, [provider, loadVoices])
+
+  const stopAudio = useCallback(() => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; audioRef.current = null }
+    setPlayingId(null)
+    setLoadingId(null)
+  }, [])
+
+  const playPreview = useCallback((v: any) => {
+    if (playingId === v.id || loadingId === v.id) { stopAudio(); return }
+    stopAudio()
+    if (!v.preview_url) return
+    setLoadingId(v.id)
+    requestAnimationFrame(() => {
+      const audio = new Audio()
+      audio.preload = 'auto'
+      audioRef.current = audio
+      let started = false
+      audio.addEventListener('timeupdate', () => {
+        if (!started && audio.currentTime > 0) {
+          started = true
+          setLoadingId(null)
+          setPlayingId(v.id)
+        }
+      })
+      audio.addEventListener('ended', () => { setPlayingId(null); setLoadingId(null) })
+      audio.addEventListener('error', () => { setPlayingId(null); setLoadingId(null) })
+      audio.src = v.preview_url
+      audio.play().catch(() => { setLoadingId(null); setPlayingId(null) })
+    })
+  }, [playingId, loadingId, stopAudio])
+
+  const filtered = useMemo(() => {
+    if (!search) return voices
+    const q = search.toLowerCase()
+    return voices.filter((v: any) =>
+      v.name?.toLowerCase().includes(q) ||
+      v.id?.toLowerCase().includes(q) ||
+      (v.description || '').toLowerCase().includes(q)
+    )
+  }, [voices, search])
+
+  return (
+    <div className="voice-modal-overlay" onClick={onClose}>
+      <div className="voice-modal" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="voice-modal-header">
+          <div>
+            <h2 style={{ fontSize: 15, fontWeight: 600, letterSpacing: -0.2 }}>Voices</h2>
+            <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+              {voices.length > 0 ? `${filtered.length} of ${voices.length} voices` : 'Browse & preview TTS voices'}
+            </span>
+          </div>
+          <button className="btn-icon" onClick={onClose}><X size={16} /></button>
+        </div>
+
+        {/* Provider tabs */}
+        <div className="voice-modal-providers">
+          {VOICE_PROVIDERS.map(p => (
+            <button
+              key={p.id}
+              className={`voice-provider-tab ${provider === p.id ? 'active' : ''}`}
+              onClick={() => { setProvider(p.id); setSearch('') }}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <div style={{ padding: '0 16px 10px' }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-3)', opacity: 0.5 }} />
+            <input
+              ref={searchRef}
+              className="input"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search voices..."
+              style={{ paddingLeft: 30, fontSize: 12 }}
+            />
+          </div>
+        </div>
+
+        {/* Voice list */}
+        <div className="voice-modal-list">
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-3)' }}>
+              <Loader2 size={20} className="spin" style={{ marginBottom: 8 }} /><br />Loading voices...
+            </div>
+          )}
+          {error && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--red)' }}>
+              {error}
+              <br /><button className="btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => loadVoices(provider)}>Retry</button>
+            </div>
+          )}
+          {!loading && !error && filtered.map((v: any) => {
+            const isPlaying = playingId === v.id
+            const isLoading = loadingId === v.id
+            const voiceValue = `${v.provider || provider}:${v.id}`
+            const isCurrent = voiceValue === currentVoice
+
+            return (
+              <div key={v.id} className={`voice-item ${isCurrent ? 'current' : ''}`}>
+                <button
+                  className={`voice-play ${isPlaying ? 'playing' : ''} ${isLoading ? 'buffering' : ''}`}
+                  onClick={() => playPreview(v)}
+                  disabled={!v.preview_url}
+                >
+                  {isLoading ? <Loader2 size={13} className="spin" /> : isPlaying ? <Square size={10} /> : <Play size={12} />}
+                </button>
+                <div className="voice-info">
+                  <span className="voice-name">{v.name?.includes(' - ') ? v.name.split(' - ')[0] : v.name}</span>
+                  <span className="voice-meta">
+                    {v.gender && <span className={`voice-gender ${v.gender?.toLowerCase()}`}>{v.gender}</span>}
+                    <span className="voice-id-small">{v.id.slice(0, 16)}</span>
+                  </span>
+                </div>
+                <button
+                  className={`btn-primary btn-sm ${isCurrent ? 'applied' : ''}`}
+                  onClick={() => { stopAudio(); onSelect(voiceValue) }}
+                  style={isCurrent ? { background: 'var(--green-dim)', color: 'var(--green)' } : {}}
+                >
+                  {isCurrent ? <><Check size={11} /> Active</> : 'Apply'}
+                </button>
+              </div>
+            )
+          })}
+          {!loading && !error && filtered.length === 0 && voices.length > 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--ink-3)', fontSize: 12 }}>No voices match your search</div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
