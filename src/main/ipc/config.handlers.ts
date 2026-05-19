@@ -11,6 +11,12 @@ const SERVER_URL = 'https://voice.pinecall.io'
 export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
   ipcMain.handle('config:get', () => db.getConfig())
 
+  // Expose specific env vars to renderer (for wizard preview)
+  const SAFE_ENV_KEYS: Record<string, string> = {
+    PORTIA_SIP_DOMAIN: ENV.SIP_DOMAIN,
+  }
+  ipcMain.handle('config:get-env', (_, key: string) => SAFE_ENV_KEYS[key] || '')
+
   ipcMain.handle('config:set', (_, updates) => db.updateConfig(updates))
 
   ipcMain.handle('config:wizard-complete', async () => {

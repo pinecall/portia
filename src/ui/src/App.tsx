@@ -270,7 +270,12 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
   }
 
   const modeLabels: Record<string, string> = { sip: 'SIP', dip: 'ICX-AlphaCom', exc: 'Edge', srv: 'Edge Controller', pulse: 'Edge' }
-  const sipDomain = config.sipDomain || ''
+  const [sipDomain, setSipDomain] = useState('')
+  useEffect(() => {
+    window.portia.invoke('config:get-env', 'PORTIA_SIP_DOMAIN')
+      .then((v: string) => setSipDomain(v || ''))
+      .catch(() => setSipDomain(''))
+  }, [])
 
   return (
     <div className="wizard">
