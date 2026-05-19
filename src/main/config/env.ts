@@ -36,7 +36,7 @@ export const ENV = {
 
   /** Default Zenitel credentials */
   ZENITEL_USER: process.env.PORTIA_ZENITEL_USER || 'admin',
-  ZENITEL_PASS: process.env.PORTIA_ZENITEL_PASS || '',
+  ZENITEL_PASS: process.env.PORTIA_ZENITEL_PASS || 'alphaadmin', // Zenitel factory default
 
   /** Relay timer for door open (ms) — sourced from constants */
   RELAY_TIMER_MS: parseInt(process.env.PORTIA_RELAY_TIMER_MS || '') || RELAY_TIMER_MS,

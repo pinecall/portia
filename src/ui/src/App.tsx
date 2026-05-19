@@ -121,7 +121,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     await window.portia.invoke('config:set', {
       zenitelHost: host,
       zenitelUser: user || 'admin',
-      zenitelPassword: pass || '',
+      zenitelPassword: pass || 'alphaadmin', // Zenitel factory default
     })
     const result = await window.portia.invoke('zenitel:test')
     setTestResult(result)
@@ -335,7 +335,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
                 <input type="password" className="input" placeholder="Password" value={pass} onChange={e => setPass(e.target.value)} />
               </div>
             </div>
-            <p className="settings-hint" style={{ marginBottom: 8 }}>Enter your Zenitel device credentials</p>
+            <p className="settings-hint" style={{ marginBottom: 8 }}>Zenitel factory defaults: admin / alphaadmin</p>
             <button className="btn-primary" onClick={testConnection} disabled={testing}>
               {testing ? <><Loader2 size={16} className="spin" /> Testing...</> : <><Wifi size={16} /> Test Connection</>}
             </button>
@@ -543,7 +543,7 @@ function DashboardPage({ zenitel, config }: any) {
           <h2>Camera</h2>
           <div className="camera-feed">
             <img
-              src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || ''}`}
+              src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || 'alphaadmin'}`}
               alt="Lobby"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />

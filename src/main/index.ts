@@ -68,7 +68,7 @@ function registerVideoProtocol() {
     const url = new URL(request.url)
     const ip = url.searchParams.get('ip')
     const user = url.searchParams.get('user') ?? 'admin'
-    const pass = url.searchParams.get('pass') ?? ''
+    const pass = url.searchParams.get('pass') ?? 'alphaadmin' // Zenitel factory default
 
     if (!ip) return new Response('Missing ip param', { status: 400 })
 
