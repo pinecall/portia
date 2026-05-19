@@ -6,7 +6,7 @@ import type { Escalation, EscalationInput } from '@shared/domain'
 import { queryAll, run } from '@main/db/connection'
 
 export function getEscalations(): Escalation[] {
-  return queryAll('SELECT * FROM escalations') as unknown as Escalation[]
+  return queryAll<Escalation>('SELECT * FROM escalations')
 }
 
 export function addEscalation(params: EscalationInput): EscalationInput {

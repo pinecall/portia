@@ -5,10 +5,12 @@
 import type { AppConfig } from '@shared/domain'
 import { queryAll, run } from '@main/db/connection'
 
+interface ConfigRow { key: string; value: string }
+
 const CONFIG_DEFAULTS: AppConfig = {
   zenitelHost: '',
   zenitelUser: 'admin',
-  zenitelPassword: 'alphaadmin',
+  zenitelPassword: '',
   zenitelHasCamera: false,
   pinecallApiKey: '',
   agentPhone: '',
@@ -20,8 +22,8 @@ const CONFIG_DEFAULTS: AppConfig = {
 
 /** Seed config table with defaults if empty. */
 export function seedConfigDefaults(): void {
-  const results = queryAll('SELECT COUNT(*) as n FROM config')
-  const count = (results[0]?.n as number) || 0
+  const results = queryAll<{ n: number }>('SELECT COUNT(*) as n FROM config')
+  const count = results[0]?.n ?? 0
   if (count > 0) return
 
   for (const [k, v] of Object.entries(CONFIG_DEFAULTS)) {
@@ -31,13 +33,13 @@ export function seedConfigDefaults(): void {
 
 export function getConfig(): AppConfig {
   const config = { ...CONFIG_DEFAULTS } as Record<string, unknown>
-  const rows = queryAll('SELECT key, value FROM config')
+  const rows = queryAll<ConfigRow>('SELECT key, value FROM config')
   for (const row of rows) {
     try {
-      config[row.key as string] = JSON.parse(row.value as string)
+      config[row.key] = JSON.parse(row.value)
     } catch { /* keep default */ }
   }
-  return config as unknown as AppConfig
+  return config as AppConfig
 }
 
 export function updateConfig(updates: Partial<AppConfig>): AppConfig {

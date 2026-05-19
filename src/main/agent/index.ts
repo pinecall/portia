@@ -23,8 +23,8 @@ const ADJECTIVES = ['amber','azure','coral','dusk','ember','frost','jade','lunar
 const NOUNS = ['arc','bay','cove','dew','elm','fern','glen','hawk','isle','jay','kite','lark','mesa','nest','oak','pine','reed','sky','thorn','wren']
 
 function generateAgentId(): string {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)]
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]!
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)]!
   return `portia-${adj}-${noun}`
 }
 
@@ -51,7 +51,7 @@ interface PortiaAgentOptions {
   sttProvider?: string
   ttsProvider?: string
   turnDetection?: string
-  onCallEvent?: (event: any) => void
+  onCallEvent?: (event: Record<string, unknown>) => void
 }
 
 // ── Main: create & connect ───────────────────────────────────────────────
@@ -99,13 +99,15 @@ export async function createAgent(opts: PortiaAgentOptions) {
     turnDetection,
   })
 
-  // Twilio phone number for testing via real phone calls
-  agent.addChannel('phone', '+17438373786', {
-    voice,
-    language: opts.language || 'es',
-    stt: sttConfig,
-    turnDetection,
-  })
+  // Optional test phone number
+  if (process.env.PORTIA_TEST_PHONE) {
+    agent.addChannel('phone', process.env.PORTIA_TEST_PHONE, {
+      voice,
+      language: opts.language || 'es',
+      stt: sttConfig,
+      turnDetection,
+    })
+  }
 
   // Emit helper
   const emit = (event: string, data: Record<string, unknown>) => {
@@ -123,18 +125,18 @@ export async function createAgent(opts: PortiaAgentOptions) {
     ctx: { db: opts.db, zenitel: opts.zenitel },
   })
 
-  // Cleanup on process exit
-  const cleanup = async () => {
+  // Disconnect function — lifecycle managed by bootstrap.ts
+  const disconnect = async () => {
     try {
       console.log(`[agent] Disconnecting ${agentId}...`)
       await pc.disconnect()
       console.log(`[agent] Disconnected`)
-    } catch {}
+    } catch (err) {
+      console.debug('[agent] Disconnect ignored:', err)
+    }
   }
-  process.once('SIGTERM', cleanup)
-  process.once('SIGINT', cleanup)
 
-  return { agent, pc, agentId, disconnect: cleanup }
+  return { agent, pc, agentId, disconnect }
 }
 
 // Re-export for bootstrap

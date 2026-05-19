@@ -6,11 +6,11 @@ import type { TeamMember, TeamMemberInput } from '@shared/domain'
 import { queryAll, queryOne, run } from '@main/db/connection'
 
 export function getTeam(): TeamMember[] {
-  return queryAll('SELECT * FROM team') as unknown as TeamMember[]
+  return queryAll<TeamMember>('SELECT * FROM team')
 }
 
 export function getTeamMember(id: string): TeamMember | null {
-  return queryOne('SELECT * FROM team WHERE id = ?', [id]) as unknown as TeamMember | null
+  return queryOne<TeamMember>('SELECT * FROM team WHERE id = ?', [id])
 }
 
 export function addTeamMember(member: TeamMemberInput): TeamMemberInput {
@@ -39,7 +39,7 @@ export function deleteTeamMember(id: string): boolean {
 }
 
 export function findTeamByName(name: string): TeamMember[] {
-  return queryAll('SELECT * FROM team WHERE LOWER(name) LIKE LOWER(?)', [`%${name}%`]) as unknown as TeamMember[]
+  return queryAll<TeamMember>('SELECT * FROM team WHERE LOWER(name) LIKE LOWER(?)', [`%${name}%`])
 }
 
 export function getTeamSummary(): string {

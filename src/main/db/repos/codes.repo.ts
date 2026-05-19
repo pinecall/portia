@@ -7,11 +7,11 @@ import { queryAll, queryOne, run } from '@main/db/connection'
 import { randomBytes } from 'node:crypto'
 
 export function getAccessCodes(): AccessCode[] {
-  return queryAll('SELECT * FROM access_codes WHERE active = 1') as unknown as AccessCode[]
+  return queryAll<AccessCode>('SELECT * FROM access_codes WHERE active = 1')
 }
 
 export function getAllAccessCodes(): AccessCode[] {
-  return queryAll('SELECT * FROM access_codes') as unknown as AccessCode[]
+  return queryAll<AccessCode>('SELECT * FROM access_codes')
 }
 
 export function createAccessCode(params: AccessCodeInput): AccessCodeInput & { id: string } {
@@ -29,22 +29,22 @@ export function deleteAccessCode(id: string): boolean {
 }
 
 export function findCodesByVisitor(visitorName: string): AccessCode[] {
-  return queryAll(
+  return queryAll<AccessCode>(
     'SELECT * FROM access_codes WHERE active = 1 AND LOWER(visitor_name) LIKE LOWER(?)',
     [`%${visitorName}%`],
-  ) as unknown as AccessCode[]
+  )
 }
 
 export function validateCode(code: string): CodeValidation {
   const normalized = code.replace(/\D/g, '').trim()
-  const entry = queryOne('SELECT * FROM access_codes WHERE code = ? AND active = 1', [normalized])
+  const entry = queryOne<AccessCode>('SELECT * FROM access_codes WHERE code = ? AND active = 1', [normalized])
   if (!entry) return { valid: false }
-  if (entry.expires_at && new Date(entry.expires_at as string) < new Date()) return { valid: false }
+  if (entry.expires_at && new Date(entry.expires_at) < new Date()) return { valid: false }
   return {
     valid: true,
-    visitor: entry.visitor_name as string,
-    assignedTo: entry.assigned_to as string,
-    codeId: entry.id as string,
+    visitor: entry.visitor_name,
+    assignedTo: entry.assigned_to ?? undefined,
+    codeId: entry.id,
   }
 }
 

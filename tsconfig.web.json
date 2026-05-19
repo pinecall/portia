@@ -10,12 +10,12 @@
     "forceConsistentCasingInFileNames": true,
     "composite": true,
     "outDir": "./out",
-    "rootDir": "./src/renderer/src",
+    "rootDir": "./src/ui/src",
     "baseUrl": ".",
     "paths": {
-      "@ui/*": ["src/renderer/src/*"],
+      "@ui/*": ["src/ui/src/*"],
       "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["src/renderer/src/**/*", "src/shared/**/*"]
+  "include": ["src/ui/src/**/*", "src/shared/**/*"]
 }

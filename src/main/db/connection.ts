@@ -9,6 +9,7 @@
 import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { DB_SAVE_DEBOUNCE_MS } from '@main/constants'
 
 let db: SqlJsDatabase | null = null
 let dbPath: string = ''
@@ -30,6 +31,14 @@ export async function initDb(path: string): Promise<SqlJsDatabase> {
   return db
 }
 
+/** Initialize an in-memory database for testing. No disk I/O. */
+export async function initDbInMemory(): Promise<SqlJsDatabase> {
+  const SQL = await initSqlJs()
+  db = new SQL.Database()
+  dbPath = ':memory:'
+  return db
+}
+
 /** Get the active database instance. Throws if not initialized. */
 export function getDb(): SqlJsDatabase {
   if (!db) throw new Error('[db] Not initialized — call initDb() first')
@@ -44,7 +53,7 @@ export function scheduleSave(): void {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     flushSync()
-  }, 250)
+  }, DB_SAVE_DEBOUNCE_MS)
 }
 
 /**
@@ -76,22 +85,22 @@ export function closeDb(): void {
 
 // ── Query helpers ────────────────────────────────────────────────────────
 
-/** Run a SELECT and return all rows as objects. */
-export function queryAll(sql: string, params: unknown[] = []): Record<string, unknown>[] {
+/** Run a SELECT and return all rows as typed objects. */
+export function queryAll<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T[] {
   const results = getDb().exec(sql, params as any[])
   if (results.length === 0) return []
-  const { columns, values } = results[0]
+  const { columns, values } = results[0]!
   return values.map((row) => {
     const obj: Record<string, unknown> = {}
     columns.forEach((col, i) => (obj[col] = row[i]))
-    return obj
+    return obj as T
   })
 }
 
 /** Run a SELECT and return the first row, or null. */
-export function queryOne(sql: string, params: unknown[] = []): Record<string, unknown> | null {
-  const rows = queryAll(sql, params)
-  return rows[0] || null
+export function queryOne<T = Record<string, unknown>>(sql: string, params: unknown[] = []): T | null {
+  const rows = queryAll<T>(sql, params)
+  return rows[0] ?? null
 }
 
 /** Run a write statement (INSERT, UPDATE, DELETE) and schedule a save. */

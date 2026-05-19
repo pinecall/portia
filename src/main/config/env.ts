@@ -7,6 +7,7 @@
 
 import { config } from 'dotenv'
 import { resolve } from 'path'
+import { RELAY_TIMER_MS } from '@main/constants'
 
 // Load .env from project root (works in dev; in prod, env vars are set by the OS)
 config({ path: resolve(__dirname, '../../.env') })
@@ -32,8 +33,8 @@ export const ENV = {
 
   /** Default Zenitel credentials */
   ZENITEL_USER: process.env.PORTIA_ZENITEL_USER || 'admin',
-  ZENITEL_PASS: process.env.PORTIA_ZENITEL_PASS || 'alphaadmin',
+  ZENITEL_PASS: process.env.PORTIA_ZENITEL_PASS || '',
 
-  /** Relay timer for door open (ms) */
-  RELAY_TIMER_MS: 7000,
+  /** Relay timer for door open (ms) — sourced from constants */
+  RELAY_TIMER_MS: parseInt(process.env.PORTIA_RELAY_TIMER_MS || '') || RELAY_TIMER_MS,
 } as const

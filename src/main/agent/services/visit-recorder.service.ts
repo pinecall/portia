@@ -8,14 +8,20 @@
 import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
 
+interface ChatMessage {
+  role: string
+  content?: string
+  tool_calls?: Array<{ function?: { name: string; arguments?: string }; name?: string; arguments?: string }>
+}
+
 export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
   try {
     const allLines: string[] = []
     let visitorName = 'Unknown visitor'
     let hasDoorSuccess = false
 
-    for (const msg of call.messages || []) {
-      const m = msg as any
+    const messages = (call.messages || []) as ChatMessage[]
+    for (const m of messages) {
       if (m.role === 'system') continue
 
       if (m.role === 'user' && m.content) {
@@ -32,7 +38,7 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
         allLines.push(`Result: ${m.content}`)
         // Extract visitor name and door status from tool results
         try {
-          const parsed = JSON.parse(m.content)
+          const parsed = JSON.parse(m.content || '{}')
           if (parsed.visitor && typeof parsed.visitor === 'string') {
             visitorName = parsed.visitor
           }
@@ -48,12 +54,14 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
       (allLines.length > 0 ? `\n\nTranscript (${t.length} messages):\n${allLines.join('\n')}` : '')
 
     const outcome = hasDoorSuccess ? 'granted' : 'denied'
+    const duration = typeof (call as Record<string, unknown>).duration === 'number'
+      ? Math.floor((call as Record<string, unknown>).duration as number)
+      : 0
 
     db.addVisit({
       visitorName, company: null, hostId: null, accessCodeUsed: null,
       date: new Date().toISOString(),
-      duration: Math.floor((call as any).duration || 0),
-      outcome, callId: call.id, summary,
+      duration, outcome, callId: call.id, summary,
     })
   } catch (err) {
     console.error('[agent] Failed to save visit:', err)
