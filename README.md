@@ -17,13 +17,13 @@ Portia turns any Zenitel intercom into an intelligent building access system —
 ## Architecture
 
 <p align="center">
-  <img src="docs/architecture.png" alt="Portia Architecture" width="600" />
+  <img src="docs/arch.png" alt="Portia Architecture" width="600" />
 </p>
 
 ### Call Flow
 
 <p align="center">
-  <img src="docs/call-flow.png" alt="Call Flow" width="700" />
+  <img src="docs/callflow.png" alt="Call Flow" width="700" />
 </p>
 
 ## Prerequisites
