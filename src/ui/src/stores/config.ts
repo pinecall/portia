@@ -22,7 +22,7 @@ interface ConfigStore extends AppConfig {
 export const useConfigStore = create<ConfigStore>((set) => ({
   zenitelHost: '',
   zenitelUser: 'admin',
-  zenitelPassword: 'alphaadmin',
+  zenitelPassword: '',
   pinecallApiKey: '',
   agentPhone: '',
   buildingName: '',

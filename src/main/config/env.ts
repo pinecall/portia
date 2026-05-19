@@ -3,6 +3,9 @@
  *
  * Single source of truth for all configuration constants.
  * Never import secrets directly — always use ENV.
+ *
+ * All values are read from environment variables with empty defaults.
+ * See .env.example for the full list of available variables.
  */
 
 import { config } from 'dotenv'
@@ -13,20 +16,20 @@ import { RELAY_TIMER_MS } from '@main/constants'
 config({ path: resolve(__dirname, '../../.env') })
 
 export const ENV = {
-  /** Pinecall API key (Cointel.es org) */
+  /** Pinecall API key */
   API_KEY: process.env.PORTIA_API_KEY || '',
 
   /** Twilio SIP domain for registration */
-  SIP_DOMAIN: process.env.PORTIA_SIP_DOMAIN || 'testing-mo16m3gw.sip.twilio.com',
+  SIP_DOMAIN: process.env.PORTIA_SIP_DOMAIN || '',
 
   /** SIP identity — how the Zenitel registers with Twilio */
-  SIP_NAME: process.env.PORTIA_SIP_NAME || 'zenitel01',
-  SIP_ID: process.env.PORTIA_SIP_ID || 'zenitel01',
-  SIP_AUTH_USER: process.env.PORTIA_SIP_AUTH_USER || 'zenitel01',
+  SIP_NAME: process.env.PORTIA_SIP_NAME || '',
+  SIP_ID: process.env.PORTIA_SIP_ID || '',
+  SIP_AUTH_USER: process.env.PORTIA_SIP_AUTH_USER || '',
   SIP_AUTH_PASS: process.env.PORTIA_SIP_AUTH_PASS || '',
 
-  /** ElevenLabs voice ID */
-  VOICE_ID: process.env.PORTIA_VOICE_ID || 'elevenlabs:h2cd3gvcqTp3m65Dysk7',
+  /** ElevenLabs voice ID (format: elevenlabs:<voice_id>) */
+  VOICE_ID: process.env.PORTIA_VOICE_ID || '',
 
   /** LLM model for the agent */
   LLM_MODEL: process.env.PORTIA_LLM_MODEL || 'gpt-4.1-mini',

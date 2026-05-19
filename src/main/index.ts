@@ -113,7 +113,7 @@ app.whenReady().then(async () => {
   // Auto-seed demo data on first launch (no building name = fresh install)
   if (!config.buildingName) {
     seedDemoData(db)
-    console.log('[Portia] First launch — seeded Cointel demo data')
+    console.log('[Portia] First launch — seeded demo data')
   }
 
   // 3. Window

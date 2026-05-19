@@ -121,7 +121,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
     await window.portia.invoke('config:set', {
       zenitelHost: host,
       zenitelUser: user || 'admin',
-      zenitelPassword: pass || 'alphaadmin',
+      zenitelPassword: pass || '',
     })
     const result = await window.portia.invoke('zenitel:test')
     setTestResult(result)
@@ -270,7 +270,7 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
   }
 
   const modeLabels: Record<string, string> = { sip: 'SIP', dip: 'ICX-AlphaCom', exc: 'Edge', srv: 'Edge Controller', pulse: 'Edge' }
-  const sipDomain = 'testing-mo16m3gw.sip.twilio.com'
+  const sipDomain = config.sipDomain || ''
 
   return (
     <div className="wizard">
@@ -327,10 +327,10 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
               </div>
               <div className="wizard-field">
                 <label className="info-label">Password</label>
-                <input type="password" className="input" placeholder="alphaadmin" value={pass} onChange={e => setPass(e.target.value)} />
+                <input type="password" className="input" placeholder="Password" value={pass} onChange={e => setPass(e.target.value)} />
               </div>
             </div>
-            <p className="settings-hint" style={{ marginBottom: 8 }}>Leave blank to use defaults (admin / alphaadmin)</p>
+            <p className="settings-hint" style={{ marginBottom: 8 }}>Enter your Zenitel device credentials</p>
             <button className="btn-primary" onClick={testConnection} disabled={testing}>
               {testing ? <><Loader2 size={16} className="spin" /> Testing...</> : <><Wifi size={16} /> Test Connection</>}
             </button>
@@ -538,7 +538,7 @@ function DashboardPage({ zenitel, config }: any) {
           <h2>Camera</h2>
           <div className="camera-feed">
             <img
-              src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || 'alphaadmin'}`}
+              src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || ''}`}
               alt="Lobby"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
@@ -690,7 +690,7 @@ const VOICE_PROVIDERS = [
 ]
 
 function AgentSettings({ config }: { config: any }) {
-  const [voice, setVoice] = useState(config.agentVoice || 'elevenlabs:h2cd3gvcqTp3m65Dysk7')
+  const [voice, setVoice] = useState(config.agentVoice || '')
   const [voiceName, setVoiceName] = useState('')
   const [llmModel, setLlmModel] = useState(config.agentLlmModel || 'gpt-4.1-mini')
   const [sttProvider, setSttProvider] = useState(config.agentSttProvider || 'deepgram-flux')
@@ -1307,7 +1307,7 @@ function LiveCallView({ call, config }: { call: any; config: any }) {
             <h2>Camera</h2>
             <div className="camera-feed live">
               <img
-                src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || 'alphaadmin'}`}
+                src={`portia-cam:///?ip=${config.zenitelHost}&user=${config.zenitelUser || 'admin'}&pass=${config.zenitelPassword || ''}`}
                 alt="Visitor"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
