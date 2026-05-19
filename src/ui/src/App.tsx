@@ -733,6 +733,12 @@ function AgentSettings({ config }: { config: any }) {
     })()
   }, [])
 
+  // Map preset → default model
+  const PRESET_MODELS: Record<string, { model: string; engine: string }> = {
+    openai: { model: 'gpt-4.1-mini', engine: 'openai' },
+    mistral: { model: 'mistral-medium-latest', engine: 'mistral' },
+  }
+
   const onPresetChange = async (preset: string) => {
     if (preset === 'custom') return // Can't select "custom" directly
     setPromptPreset(preset)
@@ -740,7 +746,14 @@ function AgentSettings({ config }: { config: any }) {
     setPromptText(tpl)
     setDefaultPrompt(tpl)
     setPromptDirty(false)
-    save({ promptPreset: preset, customPrompt: null })
+    // Also switch LLM model to match the preset
+    const target = PRESET_MODELS[preset]
+    if (target) {
+      setLlmModel(target.model)
+      save({ promptPreset: preset, customPrompt: null, agentLlmModel: target.model, agentLlmEngine: target.engine })
+    } else {
+      save({ promptPreset: preset, customPrompt: null })
+    }
   }
 
   const onPromptEdit = (text: string) => {
