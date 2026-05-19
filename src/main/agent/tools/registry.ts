@@ -1,50 +1,51 @@
 /**
- * Tool Registry — maps tool names to handlers and builds OpenAI schemas.
+ * Tool Registry — single source of truth for all tools.
+ *
+ * Imports self-contained tools (schema + handler) and exports
+ * the handler map, OpenAI schemas, and execution with validation.
  */
 
-import type { ToolContext, ToolHandler } from './types'
+import type { ToolContext } from './types'
 import type { Call } from '@pinecall/core'
-import * as ToolDefs from '@main/agent/tools'
+import type { ToolDefinition } from './define-tool'
 import { identifyVisitor } from './handlers/identify-visitor'
 import { openDoor } from './handlers/open-door'
 import { lookupVisitor } from './handlers/lookup-visitor'
 import { escalateToSecurity } from './handlers/escalate-to-security'
 import { contactTeamMember } from './handlers/contact-team-member'
 
-// ── Handler map ──────────────────────────────────────────────────────────
+// ── All tools ────────────────────────────────────────────────────────────
 
-const HANDLERS: Record<string, ToolHandler<any, any>> = {
+const TOOLS: ToolDefinition[] = [
   identifyVisitor,
   openDoor,
   lookupVisitor,
   escalateToSecurity,
   contactTeamMember,
-}
+]
 
-/** Execute a tool by name. Returns the result or an error object. */
+const TOOL_MAP = new Map(TOOLS.map(t => [t.name, t]))
+
+// ── Public API ───────────────────────────────────────────────────────────
+
+/** Execute a tool by name with zod validation. */
 export async function executeTool(
-  name: string, args: unknown, call: Call, ctx: ToolContext,
+  name: string, rawArgs: unknown, call: Call, ctx: ToolContext,
 ): Promise<unknown> {
-  const handler = HANDLERS[name]
-  if (!handler) return { error: `Unknown tool: ${name}` }
-  return handler(args, call, ctx)
+  const tool = TOOL_MAP.get(name)
+  if (!tool) return { error: `Unknown tool: ${name}` }
+
+  // Validate args with zod schema
+  const parsed = tool.schema.safeParse(rawArgs)
+  if (!parsed.success) {
+    console.error(`[tool] Validation failed for ${name}:`, parsed.error.flatten())
+    return { error: `Invalid arguments for ${name}: ${parsed.error.message}` }
+  }
+
+  return tool.handler(parsed.data, call, ctx)
 }
 
-// ── Schema generation ────────────────────────────────────────────────────
-
-/** Convert ToolDefs to OpenAI function-calling schema array. */
+/** Generate OpenAI function-calling schemas from all tools. */
 export function toolSchemas() {
-  const entries = Object.entries(ToolDefs) as [string, any][]
-  return entries.map(([name, def]) => ({
-    type: 'function' as const,
-    function: {
-      name,
-      description: def.description,
-      parameters: {
-        type: 'object',
-        properties: def.params,
-        required: def.required || [],
-      },
-    },
-  }))
+  return TOOLS.map(t => t.toOpenAISchema())
 }
