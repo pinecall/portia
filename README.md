@@ -22,31 +22,9 @@ Portia turns any Zenitel intercom into an intelligent building access system —
 
 ### Call Flow
 
-```
-Intercom → SIP → Twilio → Pinecall Server ←WebSocket→ Portia (Main Process)
-                                                            │
-                                                  ┌─────────┤
-                                                  ▼         ▼
-                                               Agent     SQLite DB
-                                             (events,    (visits, codes,
-                                              tools)      team, config)
-                                                  │
-                                                  ▼
-                                            TcivClient → Zenitel Intercom
-                                              (DTMF relay, SIP, camera)
-```
-
-### IPC Contract Boundaries
-
-```
-  Renderer (React)         Preload Bridge         Main Process
-  ┌──────────────┐        ┌────────────┐        ┌──────────────────┐
-  │ Zustand      │──IPC──►│ window.    │──IPC──►│ Zod validation   │
-  │ stores       │        │ portia.*   │        │ (safeParse)      │
-  │              │◄──IPC──│            │◄──IPC──│                  │
-  │ useAgent()   │  events│            │  emit  │ CallEvent union  │
-  └──────────────┘        └────────────┘        └──────────────────┘
-```
+<p align="center">
+  <img src="docs/call-flow.png" alt="Call Flow" width="700" />
+</p>
 
 ## Prerequisites
 
