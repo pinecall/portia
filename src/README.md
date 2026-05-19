@@ -29,9 +29,9 @@ graph LR
 | `main/ipc/` | IPC channel handlers | `*.ipc.ts` |
 | `main/config/` | Environment variables | — |
 | `main/types/` | Module augmentations, shared types | `*.d.ts` |
-| `renderer/src/` | React UI (aliased as `@ui/`) | — |
-| `renderer/src/pages/` | Page components (CRUD, dashboard) | `*Page.tsx` |
-| `renderer/src/hooks/` | Custom React hooks | `use*.ts` |
+| `ui/src/` | React UI (aliased as `@ui/`) | — |
+| `ui/src/pages/` | Page components (CRUD, dashboard) | `*Page.tsx` |
+| `ui/src/hooks/` | Custom React hooks | `use*.ts` |
 | `shared/` | Types shared between main & renderer | — |
 
 ## Tool System

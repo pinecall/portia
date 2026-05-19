@@ -31,6 +31,14 @@ export async function initDb(path: string): Promise<SqlJsDatabase> {
   return db
 }
 
+/** Initialize an in-memory database for testing. No disk I/O. */
+export async function initDbInMemory(): Promise<SqlJsDatabase> {
+  const SQL = await initSqlJs()
+  db = new SQL.Database()
+  dbPath = ':memory:'
+  return db
+}
+
 /** Get the active database instance. Throws if not initialized. */
 export function getDb(): SqlJsDatabase {
   if (!db) throw new Error('[db] Not initialized — call initDb() first')

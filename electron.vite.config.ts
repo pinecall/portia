@@ -21,11 +21,17 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    root: resolve('src/ui'),
     plugins: [react()],
     resolve: {
       alias: {
-        '@ui': resolve('src/renderer/src'),
+        '@ui': resolve('src/ui/src'),
         '@shared': resolve('src/shared'),
+      }
+    },
+    build: {
+      rollupOptions: {
+        input: resolve('src/ui/index.html'),
       }
     }
   }

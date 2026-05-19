@@ -10,6 +10,8 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:win": "electron-vite build && electron-builder --win",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
@@ -37,6 +39,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",
     "typescript": "^5.8.0",
+    "vitest": "^4.1.6",
     "zustand": "^5.0.13"
   },
   "build": {
