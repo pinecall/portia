@@ -9,7 +9,15 @@ import { ENV } from '@main/config/env'
 const SERVER_URL = 'https://voice.pinecall.io'
 
 export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
-  ipcMain.handle('config:get', () => db.getConfig())
+  ipcMain.handle('config:get', () => {
+    const cfg = db.getConfig()
+    // Merge env defaults so renderer always has the active values
+    return {
+      ...cfg,
+      agentVoice: cfg.agentVoice || ENV.VOICE_ID,
+      sipDomain: cfg.sipDomain || ENV.SIP_DOMAIN,
+    }
+  })
 
   // Expose specific env vars to renderer (for wizard preview)
   const SAFE_ENV_KEYS: Record<string, string> = {
