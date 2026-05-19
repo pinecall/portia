@@ -14,6 +14,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
   // Expose specific env vars to renderer (for wizard preview)
   const SAFE_ENV_KEYS: Record<string, string> = {
     PORTIA_SIP_DOMAIN: ENV.SIP_DOMAIN,
+    PORTIA_VOICE_ID: ENV.VOICE_ID,
   }
   ipcMain.handle('config:get-env', (_, key: string) => SAFE_ENV_KEYS[key] || '')
 

@@ -696,7 +696,8 @@ const VOICE_PROVIDERS = [
 
 function AgentSettings({ config }: { config: any }) {
   const [voice, setVoice] = useState(config.agentVoice || '')
-  const [voiceName, setVoiceName] = useState('')
+  const [voiceName, setVoiceName] = useState('Loading...')
+  const [voiceLoaded, setVoiceLoaded] = useState(false)
   const [llmModel, setLlmModel] = useState(config.agentLlmModel || 'gpt-4.1-mini')
   const [sttProvider, setSttProvider] = useState(config.agentSttProvider || 'deepgram-flux')
   const [ttsProvider, setTtsProvider] = useState(config.agentTtsProvider || 'elevenlabs')
@@ -767,12 +768,25 @@ function AgentSettings({ config }: { config: any }) {
     save({ promptPreset: preset, customPrompt: null })
   }
 
+  // Load voice from env if not in config
+  useEffect(() => {
+    if (!voice) {
+      window.portia.invoke('config:get-env', 'PORTIA_VOICE_ID')
+        .then((v: string) => { if (v) setVoice(v) })
+        .catch(() => {})
+        .finally(() => setVoiceLoaded(true))
+    } else {
+      setVoiceLoaded(true)
+    }
+  }, [])
+
   // Resolve voice name on mount and when voice changes
   useEffect(() => {
-    if (!voice) { setVoiceName(''); return }
+    if (!voice) { setVoiceName('Not configured'); return }
     const parts = voice.split(':')
     if (parts.length < 2) { setVoiceName(voice); return }
     const [prov, voiceId] = parts
+    setVoiceName('Loading...')
     window.portia.invoke('voices:list', { provider: prov })
       .then((res: any) => {
         if (res.ok) {
@@ -783,7 +797,7 @@ function AgentSettings({ config }: { config: any }) {
         }
       })
       .catch(() => setVoiceName(voiceId))
-  }, [voice])
+  }, [voice, voiceLoaded])
 
   const save = useCallback(async (updates: Record<string, any>) => {
     try {
