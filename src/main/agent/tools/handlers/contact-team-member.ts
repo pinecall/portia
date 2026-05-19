@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import { defineTool } from '../define-tool'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('tool')
 
 export const contactTeamMember = defineTool({
   name: 'contactTeamMember',
@@ -13,7 +16,7 @@ export const contactTeamMember = defineTool({
     company: z.string().describe('Company of the visitor (optional)').optional(),
   }),
   async handler(params, _call, { db }) {
-    console.log(`[tool] Contact team: ${params.teamMemberId} for ${params.visitorName}`)
+    log.info(`Contact team: ${params.teamMemberId} for ${params.visitorName}`)
     const member = db.getTeamMember(params.teamMemberId)
     if (!member) return { success: false, error: 'Team member not found.' }
 

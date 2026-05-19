@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import { defineTool } from '../define-tool'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('tool')
 
 export const identifyVisitor = defineTool({
   name: 'identifyVisitor',
@@ -16,7 +19,7 @@ export const identifyVisitor = defineTool({
     const name = params.name || ''
     const company = params.company || ''
     const host = params.host || ''
-    console.log(`[tool] identifyVisitor: name=${name || '—'} company=${company || '—'} host=${host || '—'}`)
+    log.info(`identifyVisitor: name=${name || '—'} company=${company || '—'} host=${host || '—'}`)
 
     const result: Record<string, unknown> = { updated: true, name, company, host }
 
@@ -26,7 +29,7 @@ export const identifyVisitor = defineTool({
       if (codes.length > 0) {
         result.knownVisitor = true
         result.assignedTo = codes.map(c => c.assigned_to).filter(Boolean)
-        console.log(`[tool] Known visitor: ${name} — codes assigned to: ${(result.assignedTo as string[]).join(', ')}`)
+        log.info(`Known visitor: ${name} — codes assigned to: ${(result.assignedTo as string[]).join(', ')}`)
       } else {
         result.knownVisitor = false
       }
@@ -51,12 +54,12 @@ export const identifyVisitor = defineTool({
         result.hostName = m.name
         result.hostStatus = m.status
         result.hostFloor = m.floor
-        console.log(`[tool] Host found: ${m.name} (${m.id}) — status: ${m.status}, floor: ${m.floor}`)
+        log.info(`Host found: ${m.name} (${m.id}) — status: ${m.status}, floor: ${m.floor}`)
       } else {
         result.hostFound = false
         const team = db.getTeam()
         result.availableHosts = team.map(m => m.name)
-        console.log(`[tool] Host NOT found: "${host}" — team: ${(result.availableHosts as string[]).join(', ')}`)
+        log.info(`Host NOT found: "${host}" — team: ${(result.availableHosts as string[]).join(', ')}`)
       }
     }
 

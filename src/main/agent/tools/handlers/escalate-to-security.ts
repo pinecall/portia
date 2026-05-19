@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import { defineTool } from '../define-tool'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('tool')
 
 export const escalateToSecurity = defineTool({
   name: 'escalateToSecurity',
@@ -13,7 +16,7 @@ export const escalateToSecurity = defineTool({
     urgency: z.string().describe('"normal" (routine review), "urgent" (same-day attention), or "critical" (immediate intervention)'),
   }),
   async handler(params, _call, { db }) {
-    console.log(`[tool] Security escalation: ${params.urgency} — ${params.reason}`)
+    log.info(`Security escalation: ${params.urgency} — ${params.reason}`)
     db.addEscalation({ reason: params.reason, urgency: params.urgency })
     return { success: true, message: `${params.urgency} security alert registered.` }
   },

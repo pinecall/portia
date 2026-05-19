@@ -7,6 +7,9 @@
 
 import type { PortiaDB } from '@main/db'
 import { KEYTERMS_VISIT_LIMIT } from '@main/constants'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('agent')
 
 export function buildKeyterms(db: PortiaDB): string[] {
   const terms = new Set<string>()
@@ -58,7 +61,7 @@ export function buildKeyterms(db: PortiaDB): string[] {
     return true
   })
 
-  console.log(`[agent] Keyterms: ${result.length} terms — ${result.join(', ')}`)
+  log.info(`Keyterms: ${result.length} terms — ${result.join(', ')}`)
   return result
 }
 

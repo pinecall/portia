@@ -1,6 +1,9 @@
 import { z } from 'zod'
 import { defineTool } from '../define-tool'
 import { ENV } from '@main/config/env'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('tool')
 
 export const openDoor = defineTool({
   name: 'openDoor',
@@ -14,13 +17,13 @@ export const openDoor = defineTool({
   }),
   async handler(params, _call, { db, zenitel }) {
     const normalized = params.code.replace(/\D/g, '').trim()
-    console.log(`[tool] openDoor: code="${normalized}"`)
+    log.info(`openDoor: code="${normalized}"`)
     const result = db.validateCode(normalized)
     if (!result.valid) {
       db.addEvent({ type: 'err', date: new Date().toISOString(), source: 'agent', details: `Code failed: ${normalized}`, visit_id: null })
       return { success: false, error: 'Invalid access code' }
     }
-    console.log(`[tool] Valid code for: ${result.visitor} — opening door`)
+    log.info(`Valid code for: ${result.visitor} — opening door`)
     try {
       const timerSec = Math.round(ENV.RELAY_TIMER_MS / 1000)
       await zenitel.activateRelay({ relayId: 'relay1', timer: timerSec })
@@ -28,7 +31,7 @@ export const openDoor = defineTool({
       setTimeout(async () => {
         try {
           await zenitel.deactivateRelay('relay1')
-          console.log(`[tool] Door auto-closed after ${timerSec}s`)
+          log.info(`Door auto-closed after ${timerSec}s`)
         } catch { /* relay already deactivated */ }
       }, ENV.RELAY_TIMER_MS)
     } catch (err: unknown) {

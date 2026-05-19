@@ -32,6 +32,15 @@ export class PortiaDB {
     return new PortiaDB()
   }
 
+  /** In-memory instance for unit tests — no disk I/O. */
+  static async createForTesting(): Promise<PortiaDB> {
+    const { initDbInMemory } = await import('./connection')
+    await initDbInMemory()
+    runMigrations()
+    configRepo.seedConfigDefaults()
+    return new PortiaDB()
+  }
+
   // ── Config ──────────────────────────────────────────────────────────────
   getConfig = configRepo.getConfig
   updateConfig = configRepo.updateConfig

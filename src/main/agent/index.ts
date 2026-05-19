@@ -11,7 +11,9 @@
 import { Pinecall } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
 import type { TcivClient } from 'tciv-client'
+import type { CallEvent } from '@shared/ipc-contracts'
 import { ENV } from '@main/config/env'
+import { createLogger } from '@main/logger'
 import { getPromptTemplate, getPromptVars, buildGreeting } from './prompt/builder'
 import { buildKeyterms } from './keyterms'
 import { toolSchemas } from './tools/registry'
@@ -33,7 +35,8 @@ function getAgentId(db: PortiaDB): string {
   if (config.agentId) return config.agentId
   const id = generateAgentId()
   db.updateConfig({ agentId: id })
-  console.log(`[agent] Generated agent ID: ${id}`)
+  const log = createLogger('agent')
+  log.info(`Generated agent ID: ${id}`)
   return id
 }
 
@@ -51,7 +54,7 @@ interface PortiaAgentOptions {
   sttProvider?: string
   ttsProvider?: string
   turnDetection?: string
-  onCallEvent?: (event: Record<string, unknown>) => void
+  onCallEvent?: (event: CallEvent) => void
 }
 
 // ── Main: create & connect ───────────────────────────────────────────────
@@ -74,7 +77,8 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const turnDetection = opts.turnDetection || 'native'
   const voice = opts.voice || ENV.VOICE_ID
 
-  console.log(`[agent] ID: ${agentId} | LLM: ${llmEngine}/${llmModel} | STT: ${sttProvider} | TD: ${turnDetection} | Phone: ${opts.sipUri}`)
+  const log = createLogger('agent')
+  log.info(`ID: ${agentId} | LLM: ${llmEngine}/${llmModel} | STT: ${sttProvider} | TD: ${turnDetection} | Phone: ${opts.sipUri}`)
 
   const agent = pc.agent(agentId, {
     voice,
@@ -109,10 +113,13 @@ export async function createAgent(opts: PortiaAgentOptions) {
     })
   }
 
-  // Emit helper
-  const emit = (event: string, data: Record<string, unknown>) => {
+  // Emit helper — type-safe via CallEvent discriminated union
+  const emit = <E extends CallEvent['event']>(
+    event: E,
+    data: Omit<Extract<CallEvent, { event: E }>, 'event'>,
+  ) => {
     try {
-      const safe = JSON.parse(JSON.stringify({ event, ...data }))
+      const safe = JSON.parse(JSON.stringify({ event, ...data })) as CallEvent
       opts.onCallEvent?.(safe)
     } catch (err) {
       console.error(`[agent] Emit error ${event}:`, err)
@@ -128,11 +135,12 @@ export async function createAgent(opts: PortiaAgentOptions) {
   // Disconnect function — lifecycle managed by bootstrap.ts
   const disconnect = async () => {
     try {
-      console.log(`[agent] Disconnecting ${agentId}...`)
+      const log = createLogger('agent')
+      log.info(`Disconnecting ${agentId}...`)
       await pc.disconnect()
-      console.log(`[agent] Disconnected`)
+      log.info('Disconnected')
     } catch (err) {
-      console.debug('[agent] Disconnect ignored:', err)
+      createLogger('agent').debug('Disconnect ignored:', err)
     }
   }
 

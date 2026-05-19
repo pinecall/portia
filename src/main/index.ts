@@ -18,6 +18,9 @@ import { seedDemoData } from '@main/db/seed'
 import type { AppConfig } from '@shared/domain'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('Portia')
 import { PortiaDB } from '@main/db'
 import { registerIpcHandlers } from '@main/ipc'
 
@@ -98,7 +101,7 @@ app.whenReady().then(async () => {
   // 2. SQLite (async — sql.js WASM init)
   const dbPath = join(app.getPath('userData'), 'portia.db')
   db = await PortiaDB.create(dbPath)
-  console.log(`[Portia] Database: ${dbPath}`)
+  log.info(`Database: ${dbPath}`)
 
   // Seed defaults on first launch
   const config = db.getConfig()
@@ -106,14 +109,14 @@ app.whenReady().then(async () => {
   if (!config.agentPhone) updates.agentPhone = PortiaDB.generateSipId()
   if (Object.keys(updates).length) {
     db.updateConfig(updates)
-    if (updates.agentPhone) console.log(`[Portia] Generated SIP ID: ${updates.agentPhone}`)
+    if (updates.agentPhone) log.info(`Generated SIP ID: ${updates.agentPhone}`)
     Object.assign(config, updates)
   }
 
   // Auto-seed demo data on first launch (no building name = fresh install)
   if (!config.buildingName) {
     seedDemoData(db)
-    console.log('[Portia] First launch — seeded demo data')
+    log.info('First launch — seeded demo data')
   }
 
   // 3. Window
@@ -126,14 +129,14 @@ app.whenReady().then(async () => {
   if (config.wizardCompleted) {
     import('./agent/bootstrap').then(({ startAgent }) => {
       startAgent({ db, window }).then(ok => {
-        console.log(`[Portia] Agent auto-start: ${ok ? 'connected' : 'skipped'}`)
+        log.info(`Agent auto-start: ${ok ? 'connected' : 'skipped'}`)
       })
     }).catch(err => {
-      console.log(`[Portia] Agent not available: ${err.message}`)
+      log.info(`Agent not available: ${err.message}`)
     })
   }
 
-  console.log(`[Portia] Ready. Wizard completed: ${config.wizardCompleted}`)
+  log.info(`Ready. Wizard completed: ${config.wizardCompleted}`)
 })
 
 // Ensure agent disconnects before quit (Cmd+Q, dock quit, etc.)
@@ -142,7 +145,9 @@ app.on('before-quit', async (e) => {
   try {
     const { stopAgent } = await import('./agent/bootstrap')
     await stopAgent()
-  } catch {}
+  } catch (err) {
+    log.debug('before-quit stopAgent:', err)
+  }
   db?.close()
   app.exit(0)
 })

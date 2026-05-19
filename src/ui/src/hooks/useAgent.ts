@@ -63,7 +63,9 @@ function extractFromToolCall(tc: any, prev: any) {
       if (args.code) extracted.code = args.code
       stageHint = 5
     }
-  } catch {}
+  } catch (err) {
+    console.debug('[useAgent] extractFromToolCall parse error:', err)
+  }
   return { extracted, stageHint }
 }
 

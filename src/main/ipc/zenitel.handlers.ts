@@ -6,6 +6,9 @@ import { ipcMain } from 'electron'
 import { TcivClient, scanNetwork } from 'tciv-client'
 import type { PortiaDB } from '@main/db'
 import { ENV } from '@main/config/env'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('zenitel')
 
 export function registerZenitelHandlers(db: PortiaDB) {
   const _client = (config: { zenitelHost: string; zenitelUser: string; zenitelPassword: string }) =>
@@ -74,17 +77,17 @@ export function registerZenitelHandlers(db: PortiaDB) {
         transport: 'udp',
       })
       needsReboot = true
-      console.log(`[zenitel] SIP config updated: ${sipId}@${sipDomain}`)
+      log.info(`SIP config updated: ${sipId}@${sipDomain}`)
     } else {
-      console.log(`[zenitel] SIP config already correct — skipping`)
+      log.info('SIP config already correct — skipping')
     }
 
     // 2. Set DAK (only if changed)
     if (!dakOk) {
       await z.setDAK(dakAddress)
-      console.log(`[zenitel] DAK updated → ${dakAddress}`)
+      log.info(`DAK updated → ${dakAddress}`)
     } else {
-      console.log(`[zenitel] DAK already correct — skipping`)
+      log.info('DAK already correct — skipping')
     }
 
     // 3. Enable webcall + relay HTTP API
@@ -92,12 +95,12 @@ export function registerZenitelHandlers(db: PortiaDB) {
 
     // 4. Reboot only if SIP config changed (required for registration)
     if (needsReboot) {
-      console.log(`[zenitel] Rebooting to apply SIP changes...`)
+      log.info('Rebooting to apply SIP changes...')
       await z.reboot()
     }
 
     db.updateConfig({ sipId, sipDomain })
-    console.log(`[zenitel] Provision done (reboot=${needsReboot})`)
+    log.info(`Provision done (reboot=${needsReboot})`)
     return { sipId, sipDomain, dakAddress, needsReboot }
   })
 

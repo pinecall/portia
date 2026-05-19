@@ -10,6 +10,9 @@ import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/core'
 import { ENV } from '@main/config/env'
 import { buildKeyterms } from './keyterms'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('agent')
 
 let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 
@@ -22,7 +25,7 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
   const config = db.getConfig()
 
   if (!config.zenitelHost) {
-    console.log('[Agent] No zenitelHost configured, skipping')
+    log.info('No zenitelHost configured, skipping')
     return false
   }
 
@@ -58,12 +61,12 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
     })
 
     agentState = { agent: result.agent, db, disconnect: result.disconnect }
-    console.log(`[Agent] Started — SIP: ${sipUri}`)
+    log.info(`Started — SIP: ${sipUri}`)
     window.webContents.send('portia:agent-status', { status: 'connected', sipUri })
     return true
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[Agent] Failed to start:`, msg)
+    log.error('Failed to start:', msg)
     window.webContents.send('portia:agent-status', { status: 'error', error: msg })
     agentState = null
     return false
@@ -75,10 +78,10 @@ export async function stopAgent(): Promise<void> {
     try {
       await agentState.disconnect()
     } catch (err) {
-      console.debug('[agent] Disconnect ignored:', err)
+      log.debug('Disconnect ignored:', err)
     }
     agentState = null
-    console.log('[Agent] Stopped')
+    log.info('Stopped')
   }
 }
 
@@ -101,9 +104,9 @@ export function refreshKeyterms(): void {
     agentState.agent.configure({
       stt: { provider: 'deepgram-flux', keyterms },
     })
-    console.log(`[agent] Keyterms refreshed: ${keyterms.length} terms`)
+    log.info(`Keyterms refreshed: ${keyterms.length} terms`)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
-    console.error(`[agent] Failed to refresh keyterms:`, msg)
+    log.error('Failed to refresh keyterms:', msg)
   }
 }

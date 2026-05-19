@@ -8,8 +8,12 @@
 import type { Agent, Call } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
 import type { ToolContext } from '@main/agent/tools/types'
+import type { CallEvent } from '@shared/ipc-contracts'
 import { executeTool } from '@main/agent/tools/registry'
 import { saveVisitToDB } from '@main/agent/services/visit-recorder.service'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('agent')
 
 // Event payload shapes from the voice server
 interface SpeechEvent { text?: string; message_id?: string }
@@ -21,14 +25,14 @@ interface WireOptions {
   agent: Agent
   ctx: ToolContext
   greeting: string
-  emit: (event: string, data: Record<string, unknown>) => void
+  emit: <E extends CallEvent['event']>(event: E, data: Omit<Extract<CallEvent, { event: E }>, 'event'>) => void
   db: PortiaDB
 }
 
 export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions): void {
   // Call lifecycle
   agent.on('call.started', (call: Call) => {
-    console.log(`[agent] Call started: ${call.direction} ${call.from} → ${call.to}`)
+    log.info(`Call started: ${call.direction} ${call.from} → ${call.to}`)
     emit('call.started', { call_id: call.id, direction: call.direction, from: call.from || '', to: call.to || '', transport: call.transport || 'phone' })
     db.addEvent({ type: 'sip', date: new Date().toISOString(), source: 'intercom', details: `${call.direction} call: ${call.from || 'unknown'}`, visit_id: null })
 
@@ -38,41 +42,41 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
   })
 
   agent.on('call.ended', (call: Call, reason: string) => {
-    console.log(`[agent] Call ended: ${call.id} reason=${reason}`)
+    log.info(`Call ended: ${call.id} reason=${reason}`)
     emit('call.ended', { call_id: call.id, reason })
     saveVisitToDB(call, reason, db)
   })
 
   // User speech
   agent.on('user.speaking', (event: SpeechEvent, call: Call) => {
-    console.log(`  👤 (interim): ${event.text || ''}`)
+    log.debug(`👤 (interim): ${event.text || ''}`)
     emit('user.speaking', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
   })
 
   agent.on('user.message', (event: SpeechEvent, call: Call) => {
-    console.log(`  👤 User: ${event.text || ''}`)
+    log.info(`👤 User: ${event.text || ''}`)
     emit('user.message', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
   })
 
   // Turn detection
   agent.on('turn.pause', (event: TurnEvent, call: Call) => {
-    console.log(`  ⏸ Turn pause (prob=${event.probability?.toFixed(2) || '?'})`)
+    log.debug(`⏸ Turn pause (prob=${event.probability?.toFixed(2) || '?'})`)
     emit('turn.pause', { call_id: call.id, probability: event.probability })
   })
 
   agent.on('turn.end', (event: TurnEvent, call: Call) => {
-    console.log(`  ⏹ Turn end (prob=${event.probability?.toFixed(2) || '?'})`)
+    log.debug(`⏹ Turn end (prob=${event.probability?.toFixed(2) || '?'})`)
     emit('turn.end', { call_id: call.id, probability: event.probability })
   })
 
   agent.on('turn.resumed', (_event: unknown, call: Call) => {
-    console.log(`  ▶ Turn resumed`)
+    log.debug('▶ Turn resumed')
     emit('turn.resumed', { call_id: call.id })
   })
 
   // Bot speech
   agent.on('bot.speaking', (event: BotEvent, call: Call) => {
-    console.log(`  🤖 Speaking: msg=${event.message_id}`)
+    log.info(`🤖 Speaking: msg=${event.message_id}`)
     emit('bot.speaking', { call_id: call.id, message_id: event.message_id || '', text: event.text || '' })
   })
 
@@ -81,12 +85,12 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
   })
 
   agent.on('bot.finished', (event: BotEvent, call: Call) => {
-    console.log(`  🤖 Finished: msg=${event.message_id}`)
+    log.info(`🤖 Finished: msg=${event.message_id}`)
     emit('bot.finished', { call_id: call.id, message_id: event.message_id || '' })
   })
 
   agent.on('bot.interrupted', (event: BotEvent, call: Call) => {
-    console.log(`  🤖 Interrupted: msg=${event.message_id}`)
+    log.info(`🤖 Interrupted: msg=${event.message_id}`)
     emit('bot.interrupted', { call_id: call.id, message_id: event.message_id || '' })
   })
 
@@ -96,7 +100,7 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
     if (!toolCalls) return
 
     const msgId = data.msg_id
-    console.log(`  🔧 Tools: ${toolCalls.map(tc => tc.name).join(', ')} (msg=${msgId})`)
+    log.info(`🔧 Tools: ${toolCalls.map(tc => tc.name).join(', ')} (msg=${msgId})`)
     emit('llm.tool_call', { call_id: call.id, tool_calls: toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' })) })
 
     const results: Array<{ tool_call_id: string; result: unknown }> = []
@@ -108,7 +112,7 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
       } catch (err: unknown) {
         result = { error: err instanceof Error ? err.message : String(err) }
       }
-      console.log(`  ✅ ${tc.name}: ${JSON.stringify(result).slice(0, 100)}`)
+      log.info(`✅ ${tc.name}: ${JSON.stringify(result).slice(0, 100)}`)
       emit('llm.tool_result', { call_id: call.id, result: JSON.stringify(result) })
       results.push({ tool_call_id: tc.id, result })
     }

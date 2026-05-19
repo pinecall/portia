@@ -5,8 +5,11 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import type { PortiaDB } from '@main/db'
 import { ENV } from '@main/config/env'
+import { AgentConfigUpdateSchema } from '@shared/ipc-contracts'
+import { createLogger } from '@main/logger'
 
 const SERVER_URL = 'https://voice.pinecall.io'
+const log = createLogger('ipc')
 
 export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
   ipcMain.handle('config:get', () => {
@@ -44,7 +47,9 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     try {
       const { stopAgent } = await import('@main/agent/bootstrap')
       await stopAgent()
-    } catch {}
+    } catch (err) {
+      log.debug('reset-wizard stopAgent:', err)
+    }
     db.updateConfig({ wizardCompleted: false, agentId: null })
     return true
   })
@@ -66,12 +71,21 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     try {
       const { getAgentStatus } = await import('@main/agent/bootstrap')
       return getAgentStatus()
-    } catch {
+    } catch (err) {
+      log.debug('agent:status error:', err)
       return { running: false }
     }
   })
 
-  ipcMain.handle('agent:configure', async (_, updates: Record<string, any>) => {
+  ipcMain.handle('agent:configure', async (_, raw: unknown) => {
+    // Validate at the IPC boundary
+    const parsed = AgentConfigUpdateSchema.safeParse(raw)
+    if (!parsed.success) {
+      log.warn('agent:configure invalid payload:', parsed.error.format())
+      return { ok: false, error: 'Invalid configuration' }
+    }
+    const updates = parsed.data
+
     // 1. Persist to DB
     db.updateConfig(updates)
 
@@ -80,7 +94,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
       const { getAgentState } = await import('@main/agent/bootstrap')
       const state = getAgentState()
       if (state?.agent) {
-        const body: Record<string, any> = {}
+        const body: Record<string, unknown> = {}
         if (updates.agentVoice) body.voice = updates.agentVoice
         if (updates.agentSttProvider) body.stt = { provider: updates.agentSttProvider }
         if (updates.agentLlmModel || updates.agentLlmEngine) {
@@ -98,11 +112,11 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
         }
         if (Object.keys(body).length) {
           state.agent.configure(body)
-          console.log('[ipc] Agent config hot-reloaded:', Object.keys(body).join(', '))
+          log.info('Agent config hot-reloaded:', Object.keys(body).join(', '))
         }
       }
-    } catch (err: any) {
-      console.error('[ipc] Agent hot-reload failed:', err.message)
+    } catch (err: unknown) {
+      log.error('Agent hot-reload failed:', err instanceof Error ? err.message : String(err))
     }
 
     return { ok: true }
@@ -127,9 +141,9 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
       const { fetchVoices } = await import('@pinecall/core')
       const voices = await fetchVoices({ provider: opts.provider || 'elevenlabs' })
       return { ok: true, voices }
-    } catch (err: any) {
-      console.error('[ipc] voices:list error:', err.message)
-      return { ok: false, error: err.message, voices: [] }
+    } catch (err: unknown) {
+      log.error('voices:list error:', err instanceof Error ? err.message : String(err))
+      return { ok: false, error: err instanceof Error ? err.message : 'Unknown error', voices: [] }
     }
   })
 

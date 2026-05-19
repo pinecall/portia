@@ -6,6 +6,9 @@
  */
 
 import { getDb, exec, scheduleSave } from './connection'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('db')
 
 // ── Migration registry (append-only!) ────────────────────────────────────
 
@@ -49,13 +52,13 @@ export function runMigrations(): void {
   const currentVersion = (result[0]?.values[0]?.[0] as number) || 0
 
   for (let i = currentVersion; i < MIGRATIONS.length; i++) {
-    console.log(`[db] Running migration ${i + 1}/${MIGRATIONS.length}`)
+    log.info(`Running migration ${i + 1}/${MIGRATIONS.length}`)
     exec(MIGRATIONS[i])
   }
 
   if (MIGRATIONS.length > currentVersion) {
     db.run(`PRAGMA user_version = ${MIGRATIONS.length}`)
     scheduleSave()
-    console.log(`[db] Migrations complete — version ${MIGRATIONS.length}`)
+    log.info(`Migrations complete — version ${MIGRATIONS.length}`)
   }
 }
