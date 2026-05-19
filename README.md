@@ -16,34 +16,9 @@ Portia turns any Zenitel intercom into an intelligent building access system —
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│                  Electron App                    │
-│                                                  │
-│  ┌─────────┐   ┌──────────┐   ┌──────────────┐ │
-│  │ React   │◄──│ Preload  │──►│ Main Process │ │
-│  │ (UI)    │   │ (Bridge) │   │              │ │
-│  └─────────┘   └──────────┘   │  ┌────────┐  │ │
-│                               │  │ Agent  │  │ │
-│                               │  │ Engine │  │ │
-│                               │  └───┬────┘  │ │
-│                               │      │       │ │
-│                               │  ┌───▼────┐  │ │
-│                               │  │SQLite  │  │ │
-│                               │  └────────┘  │ │
-│                               └──────────────┘ │
-└────────────────────┬────────────────────────────┘
-                     │ WebSocket
-              ┌──────▼──────┐
-              │  Pinecall   │
-              │  Server     │
-              └──────┬──────┘
-                     │ SIP/DTMF
-              ┌──────▼──────┐
-              │  Zenitel    │
-              │  Intercom   │
-              └─────────────┘
-```
+<p align="center">
+  <img src="docs/architecture.png" alt="Portia Architecture" width="600" />
+</p>
 
 ### Call Flow
 
