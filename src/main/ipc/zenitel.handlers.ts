@@ -6,7 +6,9 @@ import { ipcMain } from 'electron'
 import { TcivClient, scanNetwork } from 'tciv-client'
 import type { PortiaDB } from '@main/db'
 import { ENV } from '@main/config/env'
+import { ZENITEL_REBOOT_TIMEOUT_MS } from '@main/constants'
 import { createLogger } from '@main/logger'
+import { z } from 'zod'
 
 const log = createLogger('zenitel')
 
@@ -29,17 +31,29 @@ export function registerZenitelHandlers(db: PortiaDB) {
     return { reachable: true, webcallEnabled: info.webcallEnabled, model: info.model }
   })
 
-  ipcMain.handle('zenitel:relay', async (_, opts: any) => {
+  const RelayOptsSchema = z.union([
+    z.literal('deactivate'),
+    z.object({
+      action: z.enum(['activate', 'deactivate']).optional(),
+      relayId: z.string().optional(),
+      timer: z.number().optional(),
+    }),
+  ])
+
+  ipcMain.handle('zenitel:relay', async (_, raw: unknown) => {
+    const parsed = RelayOptsSchema.safeParse(raw)
+    if (!parsed.success) return { error: 'Invalid relay options' }
+    const opts = parsed.data
     const z = _client(db.getConfig())
-    if (opts === 'deactivate' || opts?.action === 'deactivate') {
-      await z.deactivateRelay(opts?.relayId || 'relay1')
-    } else {
-      await z.activateRelay({ relayId: opts?.relayId || 'relay1', timer: opts?.timer || 3 })
+    if (opts === 'deactivate' || (typeof opts === 'object' && opts.action === 'deactivate')) {
+      await z.deactivateRelay(typeof opts === 'object' ? opts.relayId || 'relay1' : 'relay1')
+    } else if (typeof opts === 'object') {
+      await z.activateRelay({ relayId: opts.relayId || 'relay1', timer: opts.timer || 3 })
     }
   })
 
   ipcMain.handle('zenitel:sip:get', async () => _client(db.getConfig()).getSIPConfig())
-  ipcMain.handle('zenitel:sip:set', async (_, config: any) => { await _client(db.getConfig()).setSIPConfig(config) })
+  ipcMain.handle('zenitel:sip:set', async (_, config: Record<string, unknown>) => { await _client(db.getConfig()).setSIPConfig(config as Parameters<TcivClient['setSIPConfig']>[0]) })
   ipcMain.handle('zenitel:webcall:enable', async () => { await _client(db.getConfig()).enableWebcall() })
 
   ipcMain.handle('zenitel:provision', async () => {
@@ -109,12 +123,12 @@ export function registerZenitelHandlers(db: PortiaDB) {
 
   ipcMain.handle('zenitel:set-mode', async (_, mode: string) => {
     const z = _client(db.getConfig())
-    await z.setMode(mode as any)
+    await z.setMode(mode as 'sip' | 'dip' | 'exc' | 'srv' | 'pulse')
     await z.applyChanges()
   })
 
   ipcMain.handle('zenitel:wait-reboot', async () => {
-    const online = await _client(db.getConfig()).waitForReboot(60000, 3000)
+    const online = await _client(db.getConfig()).waitForReboot(ZENITEL_REBOOT_TIMEOUT_MS, 3000)
     return { online }
   })
 
@@ -135,5 +149,5 @@ export function registerZenitelHandlers(db: PortiaDB) {
   })
 
   ipcMain.handle('zenitel:audio:get', async () => _client(db.getConfig()).getAudioSettings())
-  ipcMain.handle('zenitel:audio:set', async (_, settings: any) => { await _client(db.getConfig()).setAudioSettings(settings) })
+  ipcMain.handle('zenitel:audio:set', async (_, settings: Record<string, unknown>) => { await _client(db.getConfig()).setAudioSettings(settings as Parameters<TcivClient['setAudioSettings']>[0]) })
 }

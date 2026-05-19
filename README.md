@@ -45,6 +45,34 @@ Portia turns any Zenitel intercom into an intelligent building access system —
               └─────────────┘
 ```
 
+### Call Flow
+
+```
+Intercom → SIP → Twilio → Pinecall Server ←WebSocket→ Portia (Main Process)
+                                                            │
+                                                  ┌─────────┤
+                                                  ▼         ▼
+                                               Agent     SQLite DB
+                                             (events,    (visits, codes,
+                                              tools)      team, config)
+                                                  │
+                                                  ▼
+                                            TcivClient → Zenitel Intercom
+                                              (DTMF relay, SIP, camera)
+```
+
+### IPC Contract Boundaries
+
+```
+  Renderer (React)         Preload Bridge         Main Process
+  ┌──────────────┐        ┌────────────┐        ┌──────────────────┐
+  │ Zustand      │──IPC──►│ window.    │──IPC──►│ Zod validation   │
+  │ stores       │        │ portia.*   │        │ (safeParse)      │
+  │              │◄──IPC──│            │◄──IPC──│                  │
+  │ useAgent()   │  events│            │  emit  │ CallEvent union  │
+  └──────────────┘        └────────────┘        └──────────────────┘
+```
+
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+
@@ -208,9 +236,12 @@ Tests use `vitest` with an in-memory SQLite database:
 | Test Suite | Tests | What |
 |-----------|-------|------|
 | `codes.repo.test.ts` | 5 | Code validation, expiry, soft delete |
+| `team.repo.test.ts` | 7 | CRUD, fuzzy search, status defaults |
 | `migrations.test.ts` | 3 | Table creation, versioning, idempotency |
 | `keyterms.test.ts` | 4 | Name extraction, filtering, STT boost |
 | `registry.test.ts` | 4 | OpenAI schema generation, required params |
+| `open-door.test.ts` | 6 | Code validation, relay mock, event logging |
+| `visit-recorder.test.ts` | 6 | Outcome parsing, transcript summary |
 
 ## Agent Configuration
 

@@ -36,7 +36,7 @@ export const openDoor = defineTool({
       }, ENV.RELAY_TIMER_MS)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      console.error(`[tool] Relay failed:`, msg)
+      log.error('Relay failed:', msg)
       return { success: false, error: 'Failed to open door — relay error' }
     }
     db.addEvent({ type: 'auth', date: new Date().toISOString(), source: 'agent', details: `Code ${normalized} validated: ${result.visitor}`, visit_id: null })

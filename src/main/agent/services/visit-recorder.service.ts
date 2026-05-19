@@ -7,6 +7,9 @@
 
 import type { Call } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('agent')
 
 interface ChatMessage {
   role: string
@@ -45,7 +48,9 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
           if (parsed.success === true && parsed.visitor) {
             hasDoorSuccess = true
           }
-        } catch { /* not JSON, skip */ }
+        } catch (err) {
+          log.debug('visit-recorder: non-JSON tool result, skipping', err)
+        }
       }
     }
 
@@ -64,6 +69,6 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
       duration, outcome, callId: call.id, summary,
     })
   } catch (err) {
-    console.error('[agent] Failed to save visit:', err)
+    log.error('Failed to save visit:', err)
   }
 }

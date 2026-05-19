@@ -19,6 +19,8 @@ import { buildKeyterms } from './keyterms'
 import { toolSchemas } from './tools/registry'
 import { wireAgentEvents } from './events/wire'
 
+const log = createLogger('agent')
+
 // ── Agent ID ─────────────────────────────────────────────────────────────
 
 const ADJECTIVES = ['amber','azure','coral','dusk','ember','frost','jade','lunar','nova','onyx','pearl','quartz','ruby','sage','silk','solar','tide','vale','vine','zen']
@@ -35,7 +37,6 @@ function getAgentId(db: PortiaDB): string {
   if (config.agentId) return config.agentId
   const id = generateAgentId()
   db.updateConfig({ agentId: id })
-  const log = createLogger('agent')
   log.info(`Generated agent ID: ${id}`)
   return id
 }
@@ -77,7 +78,6 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const turnDetection = opts.turnDetection || 'native'
   const voice = opts.voice || ENV.VOICE_ID
 
-  const log = createLogger('agent')
   log.info(`ID: ${agentId} | LLM: ${llmEngine}/${llmModel} | STT: ${sttProvider} | TD: ${turnDetection} | Phone: ${opts.sipUri}`)
 
   const agent = pc.agent(agentId, {
@@ -122,7 +122,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
       const safe = JSON.parse(JSON.stringify({ event, ...data })) as CallEvent
       opts.onCallEvent?.(safe)
     } catch (err) {
-      console.error(`[agent] Emit error ${event}:`, err)
+      log.error(`Emit error ${event}:`, err)
     }
   }
 
@@ -135,12 +135,11 @@ export async function createAgent(opts: PortiaAgentOptions) {
   // Disconnect function — lifecycle managed by bootstrap.ts
   const disconnect = async () => {
     try {
-      const log = createLogger('agent')
       log.info(`Disconnecting ${agentId}...`)
       await pc.disconnect()
       log.info('Disconnected')
     } catch (err) {
-      createLogger('agent').debug('Disconnect ignored:', err)
+      log.debug('Disconnect ignored:', err)
     }
   }
 

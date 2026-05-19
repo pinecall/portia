@@ -19,10 +19,10 @@ import type { AppConfig } from '@shared/domain'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createLogger } from '@main/logger'
-
-const log = createLogger('Portia')
 import { PortiaDB } from '@main/db'
 import { registerIpcHandlers } from '@main/ipc'
+
+const log = createLogger('Portia')
 
 let mainWindow: BrowserWindow | null = null
 let db: PortiaDB

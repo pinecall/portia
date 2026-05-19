@@ -8,6 +8,10 @@
 import type { ToolContext } from './types'
 import type { Call } from '@pinecall/core'
 import type { ToolDefinition } from './define-tool'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('tool')
+
 import { identifyVisitor } from './handlers/identify-visitor'
 import { openDoor } from './handlers/open-door'
 import { lookupVisitor } from './handlers/lookup-visitor'
@@ -38,7 +42,7 @@ export async function executeTool(
   // Validate args with zod schema
   const parsed = tool.schema.safeParse(rawArgs)
   if (!parsed.success) {
-    console.error(`[tool] Validation failed for ${name}:`, parsed.error.flatten())
+    log.error(`Validation failed for ${name}:`, parsed.error.flatten())
     return { error: `Invalid arguments for ${name}: ${parsed.error.message}` }
   }
 

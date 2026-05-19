@@ -10,6 +10,9 @@ import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { DB_SAVE_DEBOUNCE_MS } from '@main/constants'
+import { createLogger } from '@main/logger'
+
+const log = createLogger('db')
 
 let db: SqlJsDatabase | null = null
 let dbPath: string = ''
@@ -70,7 +73,7 @@ export function flushSync(): void {
     const data = db.export()
     writeFileSync(dbPath, Buffer.from(data))
   } catch (err) {
-    console.error('[db] Flush failed:', err)
+    log.error('Flush failed:', err)
   }
 }
 

@@ -37,8 +37,8 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
     try {
       const { startAgent } = await import('@main/agent/bootstrap')
       await startAgent({ db, window })
-    } catch (err: any) {
-      console.error('[ipc] Failed to start agent after wizard:', err.message)
+    } catch (err: unknown) {
+      log.error('Failed to start agent after wizard:', err instanceof Error ? err.message : String(err))
     }
     return true
   })
