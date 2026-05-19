@@ -9,6 +9,7 @@
 import initSqlJs, { type Database as SqlJsDatabase } from 'sql.js'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { DB_SAVE_DEBOUNCE_MS } from '@main/constants'
 
 let db: SqlJsDatabase | null = null
 let dbPath: string = ''
@@ -44,7 +45,7 @@ export function scheduleSave(): void {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     flushSync()
-  }, 250)
+  }, DB_SAVE_DEBOUNCE_MS)
 }
 
 /**

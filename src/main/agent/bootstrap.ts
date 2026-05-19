@@ -9,6 +9,7 @@ import type { PortiaDB } from '@main/db'
 import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/core'
 import { ENV } from '@main/config/env'
+import { buildKeyterms } from './keyterms'
 
 let agentState: { agent: Agent; db: PortiaDB; disconnect: () => Promise<void> } | null = null
 
@@ -60,9 +61,10 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
     console.log(`[Agent] Started — SIP: ${sipUri}`)
     window.webContents.send('portia:agent-status', { status: 'connected', sipUri })
     return true
-  } catch (err: any) {
-    console.error(`[Agent] Failed to start:`, err.message)
-    window.webContents.send('portia:agent-status', { status: 'error', error: err.message })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[Agent] Failed to start:`, msg)
+    window.webContents.send('portia:agent-status', { status: 'error', error: msg })
     agentState = null
     return false
   }
@@ -70,7 +72,11 @@ export async function startAgent({ db, window }: BootstrapOptions): Promise<bool
 
 export async function stopAgent(): Promise<void> {
   if (agentState) {
-    try { await agentState.disconnect() } catch {}
+    try {
+      await agentState.disconnect()
+    } catch (err) {
+      console.debug('[agent] Disconnect ignored:', err)
+    }
     agentState = null
     console.log('[Agent] Stopped')
   }
@@ -91,13 +97,13 @@ export function getAgentState() {
 export function refreshKeyterms(): void {
   if (!agentState) return
   try {
-    const { buildKeyterms } = require('./keyterms')
     const keyterms = buildKeyterms(agentState.db)
     agentState.agent.configure({
       stt: { provider: 'deepgram-flux', keyterms },
     })
     console.log(`[agent] Keyterms refreshed: ${keyterms.length} terms`)
-  } catch (err: any) {
-    console.error(`[agent] Failed to refresh keyterms:`, err.message)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`[agent] Failed to refresh keyterms:`, msg)
   }
 }

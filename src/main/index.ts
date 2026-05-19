@@ -15,6 +15,7 @@ import { WebSocket } from 'ws'
 
 import { app, BrowserWindow, shell, protocol } from 'electron'
 import { seedDemoData } from '@main/db/seed'
+import type { AppConfig } from '@shared/domain'
 import { join } from 'node:path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { PortiaDB } from '@main/db'
@@ -67,7 +68,7 @@ function registerVideoProtocol() {
     const url = new URL(request.url)
     const ip = url.searchParams.get('ip')
     const user = url.searchParams.get('user') ?? 'admin'
-    const pass = url.searchParams.get('pass') ?? 'alphaadmin'
+    const pass = url.searchParams.get('pass') ?? ''
 
     if (!ip) return new Response('Missing ip param', { status: 400 })
 
@@ -101,7 +102,7 @@ app.whenReady().then(async () => {
 
   // Seed defaults on first launch
   const config = db.getConfig()
-  const updates: Record<string, any> = {}
+  const updates: Partial<AppConfig> = {}
   if (!config.agentPhone) updates.agentPhone = PortiaDB.generateSipId()
   if (Object.keys(updates).length) {
     db.updateConfig(updates)

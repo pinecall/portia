@@ -6,6 +6,7 @@
  */
 
 import type { PortiaDB } from '@main/db'
+import { KEYTERMS_VISIT_LIMIT } from '@main/constants'
 
 export function buildKeyterms(db: PortiaDB): string[] {
   const terms = new Set<string>()
@@ -38,7 +39,7 @@ export function buildKeyterms(db: PortiaDB): string[] {
   }
 
   // Recent visitor names & companies (last 50)
-  for (const v of db.getVisits(50)) {
+  for (const v of db.getVisits(KEYTERMS_VISIT_LIMIT)) {
     if (v.visitor_name && v.visitor_name !== 'Unknown visitor') {
       terms.add(v.visitor_name)
       addNameParts(terms, v.visitor_name)

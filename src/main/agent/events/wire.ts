@@ -9,7 +9,7 @@ import type { Agent, Call } from '@pinecall/core'
 import type { PortiaDB } from '@main/db'
 import type { ToolContext } from '@main/agent/tools/types'
 import { executeTool } from '@main/agent/tools/registry'
-import { saveVisitToDB } from '@main/db/repos/visit-recorder'
+import { saveVisitToDB } from '@main/agent/services/visit-recorder.service'
 
 // Event payload shapes from the voice server
 interface SpeechEvent { text?: string; message_id?: string }
