@@ -7,7 +7,7 @@
 
 import type { PortiaDB } from '@main/db'
 import type { BrowserWindow } from 'electron'
-import type { Agent } from '@pinecall/core'
+import type { Agent } from '@pinecall/sdk'
 import { ENV } from '@main/config/env'
 import { buildKeyterms } from './keyterms'
 import { createLogger } from '@main/logger'

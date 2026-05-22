@@ -8,7 +8,7 @@
  * server-side via setPromptVars. {{date}} and {{time}} are built-in.
  */
 
-import { Pinecall } from '@pinecall/core'
+import { Pinecall } from '@pinecall/sdk'
 import type { PortiaDB } from '@main/db'
 import type { TcivClient } from 'tciv-client'
 import type { CallEvent } from '@shared/ipc-contracts'

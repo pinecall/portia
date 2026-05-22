@@ -138,7 +138,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
 
   ipcMain.handle('voices:list', async (_, opts: { provider?: string } = {}) => {
     try {
-      const { fetchVoices } = await import('@pinecall/core')
+      const { fetchVoices } = await import('@pinecall/sdk')
       const voices = await fetchVoices({ provider: opts.provider || 'elevenlabs' })
       return { ok: true, voices }
     } catch (err: unknown) {

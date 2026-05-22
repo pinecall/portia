@@ -6,7 +6,7 @@
  */
 
 import type { ToolContext } from './types'
-import type { Call } from '@pinecall/core'
+import type { Call } from '@pinecall/sdk'
 import type { ToolDefinition } from './define-tool'
 import { createLogger } from '@main/logger'
 

@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod'
-import type { Call } from '@pinecall/core'
+import type { Call } from '@pinecall/sdk'
 import type { ToolContext } from './types'
 
 export interface ToolDefinition<S extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>> {

@@ -5,7 +5,7 @@
  * instead of parsing text with regex.
  */
 
-import type { Call } from '@pinecall/core'
+import type { Call } from '@pinecall/sdk'
 import type { PortiaDB } from '@main/db'
 import { createLogger } from '@main/logger'
 

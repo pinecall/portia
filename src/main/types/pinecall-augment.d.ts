@@ -1,9 +1,9 @@
 /**
- * Module augmentation for @pinecall/core — adds event types
+ * Module augmentation for @pinecall/sdk — adds event types
  * that the SDK emits but aren't in the public type map yet.
  */
 
-import type { Call } from '@pinecall/core'
+import type { Call } from '@pinecall/sdk'
 
 interface ToolCall {
   id: string
@@ -16,7 +16,7 @@ interface ToolCallData {
   msg_id: string
 }
 
-declare module '@pinecall/core' {
+declare module '@pinecall/sdk' {
   interface AgentEvents {
     'llm.tool_call': (call: Call, data: ToolCallData) => void
   }

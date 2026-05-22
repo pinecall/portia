@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@pinecall/core', 'tciv-client'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@pinecall/sdk', 'tciv-client'] })],
     resolve: {
       alias: {
         '@main': resolve('src/main'),

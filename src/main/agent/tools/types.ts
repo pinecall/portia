@@ -4,7 +4,7 @@
 
 import type { PortiaDB } from '@main/db'
 import type { TcivClient } from 'tciv-client'
-import type { Call } from '@pinecall/core'
+import type { Call } from '@pinecall/sdk'
 
 export interface ToolContext {
   db: PortiaDB

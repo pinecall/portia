@@ -5,7 +5,7 @@
  * as structured JSON to the renderer process.
  */
 
-import type { Agent, Call } from '@pinecall/core'
+import type { Agent, Call } from '@pinecall/sdk'
 import type { PortiaDB } from '@main/db'
 import type { ToolContext } from '@main/agent/tools/types'
 import type { CallEvent } from '@shared/ipc-contracts'
