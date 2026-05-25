@@ -15,7 +15,6 @@ export const AgentConfigUpdateSchema = z.object({
   agentLlmEngine: z.string().optional(),
   agentSttProvider: z.string().optional(),
   agentTtsProvider: z.string().optional(),
-  agentTurnDetection: z.string().optional(),
   language: z.string().optional(),
   promptPreset: z.string().nullable().optional(),
   customPrompt: z.string().nullable().optional(),

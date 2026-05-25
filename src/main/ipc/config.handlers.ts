@@ -103,12 +103,11 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
             ...(updates.agentLlmEngine && { engine: updates.agentLlmEngine }),
           }
         }
-        if (updates.agentTurnDetection) body.turn_detection = updates.agentTurnDetection
         if (updates.language) body.language = updates.language
         // Hot-reload prompt if preset or custom prompt changed
         if (updates.promptPreset || updates.customPrompt) {
           const { getPromptTemplate } = await import('@main/agent/prompt/builder')
-          body.llm = { ...body.llm, instructions: getPromptTemplate(db) }
+          body.llm = { ...body.llm, prompt: getPromptTemplate(db) }
         }
         if (Object.keys(body).length) {
           state.agent.configure(body)

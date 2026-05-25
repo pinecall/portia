@@ -15,11 +15,11 @@ import { createLogger } from '@main/logger'
 
 const log = createLogger('agent')
 
-// Event payload shapes from the voice server
-interface SpeechEvent { text?: string; message_id?: string }
+// Event payload shapes from the SDK (camelCase)
+interface SpeechEvent { text?: string; messageId?: string }
 interface TurnEvent { probability?: number }
-interface BotEvent { message_id?: string; text?: string }
-interface BotWordEvent { message_id?: string; word?: string; word_index?: number }
+interface BotEvent { messageId?: string; text?: string }
+interface BotWordEvent { messageId?: string; word?: string; wordIndex?: number }
 
 interface WireOptions {
   agent: Agent
@@ -76,35 +76,31 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
 
   // Bot speech
   agent.on('bot.speaking', (event: BotEvent, call: Call) => {
-    log.info(`🤖 Speaking: msg=${event.message_id}`)
-    emit('bot.speaking', { call_id: call.id, message_id: event.message_id || '', text: event.text || '' })
+    log.info(`🤖 Speaking: msg=${event.messageId}`)
+    emit('bot.speaking', { call_id: call.id, message_id: event.messageId || '', text: event.text || '' })
   })
 
   agent.on('bot.word', (event: BotWordEvent, call: Call) => {
-    emit('bot.word', { call_id: call.id, message_id: event.message_id || '', word: event.word || '', word_index: event.word_index })
+    emit('bot.word', { call_id: call.id, message_id: event.messageId || '', word: event.word || '', word_index: event.wordIndex })
   })
 
   agent.on('bot.finished', (event: BotEvent, call: Call) => {
-    log.info(`🤖 Finished: msg=${event.message_id}`)
-    emit('bot.finished', { call_id: call.id, message_id: event.message_id || '' })
+    log.info(`🤖 Finished: msg=${event.messageId}`)
+    emit('bot.finished', { call_id: call.id, message_id: event.messageId || '' })
   })
 
   agent.on('bot.interrupted', (event: BotEvent, call: Call) => {
-    log.info(`🤖 Interrupted: msg=${event.message_id}`)
-    emit('bot.interrupted', { call_id: call.id, message_id: event.message_id || '' })
+    log.info(`🤖 Interrupted: msg=${event.messageId}`)
+    emit('bot.interrupted', { call_id: call.id, message_id: event.messageId || '' })
   })
 
   // Tool calls — execute locally, send results back to server
-  agent.on('llm.tool_call', async (call: Call, data) => {
-    const toolCalls = data?.tool_calls
-    if (!toolCalls) return
+  agent.on('llm.tool_call', async (data, call: Call) => {
+    log.info(`🔧 Tools: ${data.toolCalls.map(tc => tc.name).join(', ')} (msg=${data.msgId})`)
+    emit('llm.tool_call', { call_id: call.id, tool_calls: data.toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' })) })
 
-    const msgId = data.msg_id
-    log.info(`🔧 Tools: ${toolCalls.map(tc => tc.name).join(', ')} (msg=${msgId})`)
-    emit('llm.tool_call', { call_id: call.id, tool_calls: toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' })) })
-
-    const results: Array<{ tool_call_id: string; result: unknown }> = []
-    for (const tc of toolCalls) {
+    const results: Array<{ toolCallId: string; result: unknown }> = []
+    for (const tc of data.toolCalls) {
       let result: unknown
       try {
         const args = JSON.parse(tc.arguments || '{}')
@@ -114,14 +110,9 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
       }
       log.info(`✅ ${tc.name}: ${JSON.stringify(result).slice(0, 100)}`)
       emit('llm.tool_result', { call_id: call.id, result: JSON.stringify(result) })
-      results.push({ tool_call_id: tc.id, result })
+      results.push({ toolCallId: tc.id, result })
     }
 
-    agent.send({
-      event: 'llm.tool_result',
-      call_id: call.id,
-      msg_id: msgId,
-      results,
-    })
+    call.toolResult(data.msgId, results)
   })
 }

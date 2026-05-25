@@ -1,23 +1,12 @@
 /**
  * Module augmentation for @pinecall/sdk — adds event types
  * that the SDK emits but aren't in the public type map yet.
+ *
+ * NOTE: As of SDK v0.2.0, `llm.tool_call` is natively typed with
+ * `ToolCallEvent`. This augmentation is now a no-op but kept for
+ * backward compatibility.
  */
 
-import type { Call } from '@pinecall/sdk'
-
-interface ToolCall {
-  id: string
-  name: string
-  arguments: string
-}
-
-interface ToolCallData {
-  tool_calls: ToolCall[]
-  msg_id: string
-}
-
-declare module '@pinecall/sdk' {
-  interface AgentEvents {
-    'llm.tool_call': (call: Call, data: ToolCallData) => void
-  }
-}
+// The SDK now exports ToolCallEvent and ToolCallItem natively.
+// No augmentation needed — AgentEvents already includes:
+//   'llm.tool_call': (event: ToolCallEvent, call: Call) => void

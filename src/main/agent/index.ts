@@ -50,11 +50,10 @@ interface PortiaAgentOptions {
   zenitel: TcivClient
   voice?: string
   language?: string
-  llmEngine?: string
+  llmProvider?: string
   llmModel?: string
   sttProvider?: string
   ttsProvider?: string
-  turnDetection?: string
   onCallEvent?: (event: CallEvent) => void
 }
 
@@ -73,23 +72,21 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const sttProvider = opts.sttProvider || 'deepgram-flux'
   const sttConfig = { provider: sttProvider, keyterms }
 
-  const llmEngine = opts.llmEngine || 'openai'
+  const llmProvider = opts.llmProvider || 'openai'
   const llmModel = opts.llmModel || ENV.LLM_MODEL
-  const turnDetection = opts.turnDetection || 'native'
   const voice = opts.voice || ENV.VOICE_ID
 
-  log.info(`ID: ${agentId} | LLM: ${llmEngine}/${llmModel} | STT: ${sttProvider} | TD: ${turnDetection} | Phone: ${opts.sipUri}`)
+  log.info(`ID: ${agentId} | LLM: ${llmProvider}/${llmModel} | STT: ${sttProvider} | Phone: ${opts.sipUri}`)
 
   const agent = pc.agent(agentId, {
     voice,
     language: opts.language || 'es',
     stt: sttConfig,
-    turnDetection,
     llm: {
-      engine: llmEngine,
+      provider: llmProvider,
       model: llmModel,
       enabled: true,
-      instructions: promptTemplate,
+      prompt: promptTemplate,
       vars: promptVars,
     },
     tools,
@@ -100,7 +97,6 @@ export async function createAgent(opts: PortiaAgentOptions) {
     voice,
     language: opts.language || 'es',
     stt: sttConfig,
-    turnDetection,
   })
 
   // Optional test phone number
@@ -109,7 +105,6 @@ export async function createAgent(opts: PortiaAgentOptions) {
       voice,
       language: opts.language || 'es',
       stt: sttConfig,
-      turnDetection,
     })
   }
 
