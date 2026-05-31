@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
-  Search, Wifi, WifiOff, ChevronRight, ChevronLeft,
-  Check, Loader2, Radio,
+  Wifi, WifiOff, ChevronRight, ChevronLeft,
+  Check, Loader2,
   LayoutDashboard, Users, Key, FileText, Camera, Settings,
   Shield, Clock, TrendingUp, DoorOpen, Activity,
   RefreshCw, CircleDot, Phone, User, Building2, UserCheck,
@@ -99,22 +99,11 @@ function RebootModal({ message, onDone }: { message: string; onDone: () => void 
 
 function Wizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0)
-  const [scanning, setScanning] = useState(false)
-  const [devices, setDevices] = useState<any[]>([])
   const [host, setHost] = useState('')
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<any>(null)
-
-  const scan = async () => {
-    setScanning(true)
-    setDevices([])
-    const result = await window.portia.invoke('zenitel:scan')
-    setDevices(result)
-    setScanning(false)
-    if (result.length === 1) setHost(result[0].ip)
-  }
 
   const testConnection = async () => {
     setTesting(true)
@@ -299,26 +288,18 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
       <div className="wizard-body">
         {step === 0 && (
           <div className="wizard-card">
-            <h2>Find intercoms on the network</h2>
-            <button className="btn-primary" onClick={scan} disabled={scanning}>
-              {scanning ? <><Loader2 size={16} className="spin" /> Scanning...</> : <><Search size={16} /> Scan Network</>}
-            </button>
-            {devices.length > 0 && (
-              <div className="device-list">
-                {devices.map((d: any) => (
-                  <div key={d.ip} className={`device-card ${host === d.ip ? 'selected' : ''}`} onClick={() => setHost(d.ip)}>
-                    <Radio size={14} className="device-icon" />
-                    <div className="device-info">
-                      <span className="device-ip">{d.ip}</span>
-                      <span className="device-meta">{d.model || 'Intercom'} · {d.firmware || '—'} · {d.hasCamera ? 'Camera' : 'Audio only'}</span>
-                    </div>
-                    {host === d.ip && <Check size={14} className="device-check" />}
-                  </div>
-                ))}
-              </div>
-            )}
-            <input type="text" className="input" placeholder="Or enter IP manually..." value={host} onChange={(e) => setHost(e.target.value)} />
-            <button className="btn-primary" disabled={!host} onClick={() => setStep(1)}>Continue <ChevronRight size={16} /></button>
+            <h2>Enter intercom IP address</h2>
+            <p className="wizard-sub">Type the IP address of your Zenitel intercom.</p>
+            <input
+              type="text"
+              className="input"
+              placeholder="192.168.1.___"
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              autoFocus
+            />
+            <p className="settings-hint">Example: 192.168.1.100 — check the intercom's screen or your router's DHCP table.</p>
+            <button className="btn-primary" disabled={!host || !/^\d+\.\d+\.\d+\.\d+$/.test(host)} onClick={() => setStep(1)}>Continue <ChevronRight size={16} /></button>
           </div>
         )}
 
@@ -626,6 +607,10 @@ function SettingsPage({ config, zenitel }: any) {
               <InfoRow label="Phone Channel" value={config.agentPhone || config.sipId} />
               <InfoRow label="Building" value={config.buildingName || 'Not set'} />
             </div>
+          </div>
+          <div className="info-section">
+            <h2>Diagnostic</h2>
+            <DiagnosticButton />
           </div>
           <div className="info-section">
             <h2>Device</h2>
@@ -1449,6 +1434,53 @@ function PlaceholderPage({ title, desc, icon: Icon }: { title: string; desc: str
         <Icon size={32} />
         <p>{desc}</p>
       </div>
+    </div>
+  )
+}
+
+function DiagnosticButton() {
+  const [running, setRunning] = useState(false)
+  const [result, setResult] = useState<{ results: Array<{ name: string; status: string; detail: string }>; savedPath: string } | null>(null)
+
+  const run = async () => {
+    setRunning(true)
+    setResult(null)
+    try {
+      const res = await window.portia.invoke('diagnostic:run')
+      setResult(res)
+    } catch (err: any) {
+      setResult({ results: [{ name: 'diagnostic', status: 'fail', detail: err.message || 'Failed' }], savedPath: '' })
+    }
+    setRunning(false)
+  }
+
+  const statusIcon = (s: string) => s === 'pass' ? '✓' : s === 'fail' ? '✗' : s === 'warn' ? '⚠' : '○'
+  const statusColor = (s: string) => s === 'pass' ? 'var(--lime)' : s === 'fail' ? 'var(--danger)' : s === 'warn' ? '#f59e0b' : 'var(--ink-muted)'
+
+  return (
+    <div>
+      <button className="btn-primary" onClick={run} disabled={running}>
+        {running ? <><Loader2 size={16} className="spin" /> Running diagnostic...</> : <><Activity size={16} /> Run Diagnostic</>}
+      </button>
+      <p className="settings-hint">Tests device connectivity, SIP config, DAK, environment variables, and saves a report to your Desktop.</p>
+      {result && (
+        <div style={{ marginTop: 12 }}>
+          <div className="info-grid" style={{ gap: 2 }}>
+            {result.results.map((r, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12, padding: '3px 0', fontFamily: 'monospace' }}>
+                <span style={{ color: statusColor(r.status), minWidth: 14, textAlign: 'center' }}>{statusIcon(r.status)}</span>
+                <span style={{ minWidth: 200, color: 'var(--ink-muted)' }}>{r.name}</span>
+                <span style={{ color: r.status === 'fail' ? 'var(--danger)' : 'var(--ink)' }}>{r.detail}</span>
+              </div>
+            ))}
+          </div>
+          {result.savedPath && (
+            <p className="settings-hint" style={{ marginTop: 8 }}>
+              📄 Report saved to: <strong>{result.savedPath}</strong>
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -60,18 +60,26 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const config = db.getConfig()
     const z = _client(config)
     const sipDomain = ENV.SIP_DOMAIN
-
-    // SIP identity — fixed Twilio credential for this intercom
     const sipName = ENV.SIP_NAME
     const sipId = ENV.SIP_ID
 
-    // DAK target — the Portia agent's phone (dynamic per installation)
-    const agentPhone = config.agentPhone || config.sipId || 'portia'
-    const dakAddress = `${agentPhone}@${sipDomain}`
+    // Pre-flight validation
+    if (!sipDomain) return { error: 'Missing SIP domain (PORTIA_SIP_DOMAIN)' }
+    if (!sipId) return { error: 'Missing SIP ID (PORTIA_SIP_ID)' }
+    if (!ENV.SIP_AUTH_USER) return { error: 'Missing SIP auth user (PORTIA_SIP_AUTH_USER)' }
+    if (!ENV.SIP_AUTH_PASS) return { error: 'Missing SIP auth password (PORTIA_SIP_AUTH_PASS)' }
+
+    // DAK target — use the configured SIP ID (e.g. "222@domain")
+    const dakAddress = `${sipId}@${sipDomain}`
 
     // Read current state to avoid unnecessary writes + reboots
     const currentSip = await z.getSIPConfig()
     const currentDak = await z.getDAK()
+
+    log.info(`Current SIP: ${currentSip.directoryNumber}@${currentSip.domain}`)
+    log.info(`Current DAK: ${currentDak}`)
+    log.info(`Target SIP: ${sipId}@${sipDomain}`)
+    log.info(`Target DAK: ${dakAddress}`)
 
     const sipOk = currentSip.domain === sipDomain
       && currentSip.directoryNumber === sipId
@@ -82,7 +90,7 @@ export function registerZenitelHandlers(db: PortiaDB) {
     // 1. Configure SIP registration (only if changed)
     if (!sipOk) {
       await z.setSIPConfig({
-        displayName: sipName,
+        displayName: sipName || sipId,
         directoryNumber: sipId,
         domain: sipDomain,
         authUsername: ENV.SIP_AUTH_USER,
@@ -91,7 +99,7 @@ export function registerZenitelHandlers(db: PortiaDB) {
         transport: 'udp',
       })
       needsReboot = true
-      log.info(`SIP config updated: ${sipId}@${sipDomain}`)
+      log.info(`SIP config updated: ${sipId}@${sipDomain} (user: ${ENV.SIP_AUTH_USER})`)
     } else {
       log.info('SIP config already correct — skipping')
     }

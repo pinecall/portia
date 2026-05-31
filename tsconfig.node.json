@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "composite": true,
     "outDir": "./out",
-    "rootDir": "./src/main",
+    "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
       "@main/*": ["src/main/*"],

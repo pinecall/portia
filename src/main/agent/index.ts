@@ -87,10 +87,8 @@ export async function createAgent(opts: PortiaAgentOptions) {
       model: llmModel,
       enabled: true,
       prompt: promptTemplate,
-      vars: promptVars,
     },
     tools,
-    greeting,
   })
 
   agent.addChannel('phone', opts.sipUri, {

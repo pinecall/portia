@@ -9,9 +9,11 @@ import type { PortiaDB } from '@main/db'
 import { registerZenitelHandlers } from './zenitel.handlers'
 import { registerDbHandlers } from './db.handlers'
 import { registerConfigHandlers } from './config.handlers'
+import { registerDiagnosticHandlers } from './diagnostic.handlers'
 
 export function registerIpcHandlers(window: BrowserWindow, db: PortiaDB) {
   registerZenitelHandlers(db)
   registerDbHandlers(db)
   registerConfigHandlers(window, db)
+  registerDiagnosticHandlers(db)
 }

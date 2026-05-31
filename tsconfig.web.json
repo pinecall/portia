@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "composite": true,
     "outDir": "./out",
-    "rootDir": "./src/ui/src",
+    "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
       "@ui/*": ["src/ui/src/*"],

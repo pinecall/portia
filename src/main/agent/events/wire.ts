@@ -11,6 +11,7 @@ import type { ToolContext } from '@main/agent/tools/types'
 import type { CallEvent } from '@shared/ipc-contracts'
 import { executeTool } from '@main/agent/tools/registry'
 import { saveVisitToDB } from '@main/agent/services/visit-recorder.service'
+import { getPromptVars } from '@main/agent/prompt/builder'
 import { createLogger } from '@main/logger'
 
 const log = createLogger('agent')
@@ -39,6 +40,10 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
     if (call.direction === 'inbound') {
       call.say(greeting)
     }
+
+    // Inject prompt template vars (building, team, codes)
+    const promptVars = getPromptVars(db)
+    call.setPromptVars(promptVars)
   })
 
   agent.on('call.ended', (call: Call, reason: string) => {
