@@ -266,6 +266,49 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
       .catch(() => setSipDomain(''))
   }, [])
 
+  // ── Inline diagnostic: auto-ping IP ──
+  const [pinging, setPinging] = useState(false)
+  const [pingResult, setPingResult] = useState<'ok' | 'fail' | null>(null)
+
+  const pingHost = async (ip: string) => {
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(ip)) return
+    setPinging(true)
+    setPingResult(null)
+    try {
+      // Save IP temporarily so the handler can reach it
+      await window.portia.invoke('config:set', { zenitelHost: ip, zenitelUser: user || 'admin', zenitelPassword: pass || 'alphaadmin' })
+      const result = await window.portia.invoke('zenitel:test')
+      setPingResult(result?.reachable ? 'ok' : 'fail')
+    } catch {
+      setPingResult('fail')
+    }
+    setPinging(false)
+  }
+
+  // ── Diagnostic report ──
+  const [diagRunning, setDiagRunning] = useState(false)
+  const [diagSaved, setDiagSaved] = useState('')
+
+  const runDiagnostic = async () => {
+    setDiagRunning(true)
+    setDiagSaved('')
+    try {
+      // Make sure current wizard state is saved for diagnostic
+      if (host) {
+        await window.portia.invoke('config:set', {
+          zenitelHost: host,
+          zenitelUser: user || 'admin',
+          zenitelPassword: pass || 'alphaadmin',
+        })
+      }
+      const res = await window.portia.invoke('diagnostic:run')
+      setDiagSaved(res.savedPath || 'saved')
+    } catch {
+      setDiagSaved('error')
+    }
+    setDiagRunning(false)
+  }
+
   return (
     <div className="wizard">
       {showRebootModal && <RebootModal message={rebootMessage} onDone={onRebootDone} />}
@@ -290,14 +333,35 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
           <div className="wizard-card">
             <h2>Enter intercom IP address</h2>
             <p className="wizard-sub">Type the IP address of your Zenitel intercom.</p>
-            <input
-              type="text"
-              className="input"
-              placeholder="192.168.1.___"
-              value={host}
-              onChange={(e) => setHost(e.target.value)}
-              autoFocus
-            />
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <input
+                type="text"
+                className="input"
+                placeholder="192.168.1.___"
+                value={host}
+                onChange={(e) => setHost(e.target.value)}
+                autoFocus
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn-ghost"
+                disabled={pinging || !/^\d+\.\d+\.\d+\.\d+$/.test(host)}
+                onClick={() => pingHost(host)}
+                style={{ whiteSpace: 'nowrap' }}
+              >
+                {pinging ? <Loader2 size={14} className="spin" /> : <Wifi size={14} />}
+                {' '}Ping
+              </button>
+            </div>
+            {pingResult && (
+              <div className={`test-result ${pingResult === 'ok' ? 'ok' : 'fail'}`} style={{ marginTop: 8 }}>
+                {pingResult === 'ok' ? (
+                  <><Check size={14} /> Device found at {host}</>
+                ) : (
+                  <><WifiOff size={14} /> No response from {host} — check IP and that the device is powered on</>
+                )}
+              </div>
+            )}
             <p className="settings-hint">Example: 192.168.1.100 — check the intercom's screen or your router's DHCP table.</p>
             <button className="btn-primary" disabled={!host || !/^\d+\.\d+\.\d+\.\d+$/.test(host)} onClick={() => setStep(1)}>Continue <ChevronRight size={16} /></button>
           </div>
@@ -323,9 +387,19 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
             {testResult && (
               <div className={`test-result ${testResult.reachable ? 'ok' : 'fail'}`}>
                 {testResult.reachable ? (
-                  <><Check size={16} /><div><div>Connected — {testResult.model}</div><div className="test-detail">Webcall: {testResult.webcallEnabled ? 'Enabled' : 'Disabled'}</div></div></>
+                  <>
+                    <Check size={16} />
+                    <div>
+                      <div>Connected — {testResult.model}</div>
+                      <div className="test-detail" style={{ fontSize: 11, opacity: 0.8, marginTop: 4, lineHeight: 1.6 }}>
+                        Webcall: {testResult.webcallEnabled ? '✓ Enabled' : '✗ Disabled'}<br />
+                        SIP: {testResult.sipRegistered ? '✓ Registered' : '✗ Not registered'}<br />
+                        Mode: {testResult.mode || '—'} · Firmware: {testResult.firmware || '—'}
+                      </div>
+                    </div>
+                  </>
                 ) : (
-                  <><WifiOff size={16} /><div>Connection failed — check credentials</div></>
+                  <><WifiOff size={16} /><div>Connection failed — check credentials and that the device is reachable</div></>
                 )}
               </div>
             )}
@@ -412,6 +486,19 @@ function Wizard({ onComplete }: { onComplete: () => void }) {
               </div>
             )}
           </div>
+        )}
+      </div>
+
+      {/* Persistent diagnostic button — always visible in wizard */}
+      <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button className="btn-ghost" onClick={runDiagnostic} disabled={diagRunning} style={{ fontSize: 12 }}>
+          {diagRunning ? <><Loader2 size={12} className="spin" /> Running...</> : <><Activity size={12} /> Save Diagnostic Report</>}
+        </button>
+        {diagSaved && diagSaved !== 'error' && (
+          <span style={{ fontSize: 11, color: 'var(--lime)' }}>✓ Saved to Desktop</span>
+        )}
+        {diagSaved === 'error' && (
+          <span style={{ fontSize: 11, color: 'var(--danger)' }}>✗ Failed to save</span>
         )}
       </div>
     </div>

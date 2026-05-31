@@ -28,7 +28,14 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const reachable = await z.isReachable()
     if (!reachable) return { reachable: false, webcallEnabled: false }
     const info = await z.getDeviceInfo()
-    return { reachable: true, webcallEnabled: info.webcallEnabled, model: info.model }
+    return {
+      reachable: true,
+      webcallEnabled: info.webcallEnabled,
+      model: info.model,
+      firmware: info.firmware,
+      mode: info.mode,
+      sipRegistered: info.sipRegistered,
+    }
   })
 
   const RelayOptsSchema = z.union([
