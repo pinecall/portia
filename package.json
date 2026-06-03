@@ -15,7 +15,7 @@
     "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@pinecall/sdk": "^0.2.6",
+    "@pinecall/sdk": "^0.2.7",
     "@types/ws": "^8.18.1",
     "dotenv": "^17.4.2",
     "electron-updater": "^6.3.0",

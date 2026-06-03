@@ -5,11 +5,10 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { PortiaDB } from '@main/db'
-import { executeTool } from '@main/agent/tools/registry'
+import { createTools } from '@main/agent/tools/tools'
 
 let db: PortiaDB
 
-// Mock zenitel client
 function createMockZenitel() {
   return {
     activateRelay: vi.fn().mockResolvedValue(undefined),
@@ -17,7 +16,6 @@ function createMockZenitel() {
   }
 }
 
-// Mock call object (minimal shape needed by tools)
 function mockCall() {
   return { id: 'call-001', direction: 'inbound' } as any
 }
@@ -27,12 +25,19 @@ beforeEach(async () => {
   vi.useFakeTimers()
 })
 
+function getOpenDoor(zenitel: any) {
+  const tools = createTools({ db, zenitel })
+  const t = tools.find(t => t.name === 'openDoor')!
+  return t as typeof t & { execute: (args: { code: string }, call: any) => Promise<any> }
+}
+
 describe('openDoor tool', () => {
   it('opens door with valid access code', async () => {
     db.createAccessCode({ code: '12345', visitorName: 'Luis Pérez', assignedTo: 'Ana Torres' })
     const zenitel = createMockZenitel()
+    const openDoor = getOpenDoor(zenitel)
 
-    const result = await executeTool('openDoor', { code: '12345' }, mockCall(), { db, zenitel } as any) as any
+    const result = await openDoor.execute({ code: '12345' }, mockCall()) as any
 
     expect(result.success).toBe(true)
     expect(result.visitor).toBe('Luis Pérez')
@@ -41,8 +46,9 @@ describe('openDoor tool', () => {
 
   it('rejects invalid access code', async () => {
     const zenitel = createMockZenitel()
+    const openDoor = getOpenDoor(zenitel)
 
-    const result = await executeTool('openDoor', { code: '99999' }, mockCall(), { db, zenitel } as any) as any
+    const result = await openDoor.execute({ code: '99999' }, mockCall()) as any
 
     expect(result.success).toBe(false)
     expect(result.error).toBe('Invalid access code')
@@ -52,8 +58,9 @@ describe('openDoor tool', () => {
   it('strips non-digit characters from code', async () => {
     db.createAccessCode({ code: '54321', visitorName: 'María Gómez', assignedTo: 'Carlos' })
     const zenitel = createMockZenitel()
+    const openDoor = getOpenDoor(zenitel)
 
-    const result = await executeTool('openDoor', { code: '5-43-21' }, mockCall(), { db, zenitel } as any) as any
+    const result = await openDoor.execute({ code: '5-43-21' }, mockCall()) as any
 
     expect(result.success).toBe(true)
     expect(result.visitor).toBe('María Gómez')
@@ -63,8 +70,9 @@ describe('openDoor tool', () => {
     db.createAccessCode({ code: '11111', visitorName: 'Test User', assignedTo: 'Host' })
     const zenitel = createMockZenitel()
     zenitel.activateRelay.mockRejectedValue(new Error('ECONNREFUSED'))
+    const openDoor = getOpenDoor(zenitel)
 
-    const result = await executeTool('openDoor', { code: '11111' }, mockCall(), { db, zenitel } as any) as any
+    const result = await openDoor.execute({ code: '11111' }, mockCall()) as any
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('relay error')
@@ -73,8 +81,9 @@ describe('openDoor tool', () => {
   it('logs door access event on success', async () => {
     db.createAccessCode({ code: '67890', visitorName: 'Pedro Ruiz', assignedTo: 'Admin' })
     const zenitel = createMockZenitel()
+    const openDoor = getOpenDoor(zenitel)
 
-    await executeTool('openDoor', { code: '67890' }, mockCall(), { db, zenitel } as any)
+    await openDoor.execute({ code: '67890' }, mockCall())
 
     const events = db.getEvents(5)
     const authEvent = events.find(e => e.type === 'auth')
@@ -84,8 +93,9 @@ describe('openDoor tool', () => {
 
   it('logs error event on failed code', async () => {
     const zenitel = createMockZenitel()
+    const openDoor = getOpenDoor(zenitel)
 
-    await executeTool('openDoor', { code: '00000' }, mockCall(), { db, zenitel } as any)
+    await openDoor.execute({ code: '00000' }, mockCall())
 
     const events = db.getEvents(5)
     const errEvent = events.find(e => e.type === 'err')

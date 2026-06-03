@@ -16,7 +16,7 @@ import { ENV } from '@main/config/env'
 import { createLogger } from '@main/logger'
 import { getPromptTemplate, getPromptVars, buildGreeting } from './prompt/builder'
 import { buildKeyterms } from './keyterms'
-import { toolSchemas } from './tools/registry'
+import { createTools, type ToolContext } from './tools/tools'
 import { wireAgentEvents } from './events/wire'
 
 const log = createLogger('agent')
@@ -67,7 +67,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const promptTemplate = getPromptTemplate(opts.db)
   const promptVars = getPromptVars(opts.db)
   const greeting = buildGreeting(opts.db)
-  const tools = toolSchemas()
+  const tools = createTools({ db: opts.db, zenitel: opts.zenitel })
   const keyterms = buildKeyterms(opts.db)
   const sttProvider = opts.sttProvider || 'deepgram-flux'
   const sttConfig = { provider: sttProvider, keyterms }
@@ -119,10 +119,8 @@ export async function createAgent(opts: PortiaAgentOptions) {
     }
   }
 
-  // Wire all events
   wireAgentEvents({
     agent, greeting, emit, db: opts.db,
-    ctx: { db: opts.db, zenitel: opts.zenitel },
   })
 
   // Disconnect function — lifecycle managed by bootstrap.ts

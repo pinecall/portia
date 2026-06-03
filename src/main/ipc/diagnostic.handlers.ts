@@ -6,6 +6,7 @@
  */
 
 import { ipcMain, app } from 'electron'
+import { Pinecall } from '@pinecall/sdk'
 import { TcivClient } from 'tciv-client'
 import { join } from 'path'
 import { writeFileSync } from 'fs'
@@ -31,7 +32,40 @@ export function registerDiagnosticHandlers(db: PortiaDB) {
       log.info(`[${status.toUpperCase()}] ${name}: ${detail}`)
     }
 
-    // ── 1. Environment Variables ──────────────────────────────────────
+    // ── 1. App & SDK Info ────────────────────────────────────────────
+    add('app.version', 'pass', app.getVersion())
+    add('app.platform', 'pass', `${process.platform} ${process.arch}`)
+    add('app.electron', 'pass', process.versions.electron || 'unknown')
+    add('app.node', 'pass', process.versions.node || 'unknown')
+
+    // Portia package version
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const portiaPkg = require('../../../package.json')
+      add('portia.version', 'pass', portiaPkg.version)
+    } catch {
+      add('portia.version', 'warn', 'Could not read Portia version')
+    }
+
+    // SDK version
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const sdkPkg = require('@pinecall/sdk/package.json')
+      add('sdk.version', 'pass', sdkPkg.version)
+    } catch {
+      add('sdk.version', 'warn', 'Could not read SDK version')
+    }
+
+    // tciv-client version
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const tcivPkg = require('tciv-client/package.json')
+      add('tciv.version', 'pass', tcivPkg.version)
+    } catch {
+      add('tciv.version', 'warn', 'Could not read tciv-client version')
+    }
+
+    // ── 2. Environment Variables ──────────────────────────────────────
     add('PORTIA_API_KEY', ENV.API_KEY ? 'pass' : 'fail', ENV.API_KEY ? 'Set (hidden)' : 'MISSING — agent cannot connect')
     add('PORTIA_SIP_DOMAIN', ENV.SIP_DOMAIN ? 'pass' : 'fail', ENV.SIP_DOMAIN || 'MISSING')
     add('PORTIA_SIP_ID', ENV.SIP_ID ? 'pass' : 'fail', ENV.SIP_ID || 'MISSING — DAK will be wrong')
@@ -40,12 +74,41 @@ export function registerDiagnosticHandlers(db: PortiaDB) {
     add('PORTIA_SIP_AUTH_PASS', ENV.SIP_AUTH_PASS ? 'pass' : 'fail', ENV.SIP_AUTH_PASS ? 'Set (hidden)' : 'MISSING')
     add('PORTIA_VOICE_ID', ENV.VOICE_ID ? 'pass' : 'warn', ENV.VOICE_ID || 'Not set (will use server default)')
 
-    // ── 2. Database Config ───────────────────────────────────────────
+    // ── 3. Database Config ───────────────────────────────────────────
     add('db.zenitelHost', config.zenitelHost ? 'pass' : 'fail', config.zenitelHost || 'MISSING — no device IP configured')
     add('db.buildingName', config.buildingName ? 'pass' : 'warn', config.buildingName || 'Not set')
     add('db.agentId', config.agentId ? 'pass' : 'warn', config.agentId || 'Not generated yet')
 
-    // ── 3. Device Connectivity ───────────────────────────────────────
+    // ── 4. Agent Status ──────────────────────────────────────────────
+    try {
+      const { getAgentStatus } = await import('@main/agent/bootstrap')
+      const agentStatus = getAgentStatus()
+      add('agent.running', agentStatus.running ? 'pass' : 'warn', agentStatus.running ? 'Agent is running' : 'Agent is NOT running')
+    } catch {
+      add('agent.running', 'warn', 'Could not check agent status')
+    }
+
+    // ── 5. SDK Connection Test ───────────────────────────────────────
+    add('sdk.server', 'pass', 'wss://voice.pinecall.io')
+    if (ENV.API_KEY) {
+      try {
+        const pc = new Pinecall({ apiKey: ENV.API_KEY })
+        const connectPromise = pc.connect()
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Connection timeout (5s)')), 5000)
+        )
+        await Promise.race([connectPromise, timeoutPromise])
+        add('sdk.connection', 'pass', 'Connected to voice.pinecall.io successfully')
+        try { await pc.disconnect() } catch { /* ignore */ }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        add('sdk.connection', 'fail', `Failed: ${msg}`)
+      }
+    } else {
+      add('sdk.connection', 'skip', 'No API key — cannot test connection')
+    }
+
+    // ── 6. Device Connectivity ───────────────────────────────────────
     if (!config.zenitelHost) {
       add('device.reachable', 'skip', 'No device IP configured')
       add('device.info', 'skip', 'Skipped')
@@ -113,30 +176,6 @@ export function registerDiagnosticHandlers(db: PortiaDB) {
       }
     }
 
-    // ── 4. SDK Version ───────────────────────────────────────────────
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const sdkPkg = require('@pinecall/sdk/package.json')
-      add('sdk.version', 'pass', sdkPkg.version)
-    } catch {
-      add('sdk.version', 'warn', 'Could not read SDK version')
-    }
-
-    // ── 5. tciv-client Version ───────────────────────────────────────
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const tcivPkg = require('tciv-client/package.json')
-      add('tciv.version', 'pass', tcivPkg.version)
-    } catch {
-      add('tciv.version', 'warn', 'Could not read tciv-client version')
-    }
-
-    // ── 6. App Info ──────────────────────────────────────────────────
-    add('app.version', 'pass', app.getVersion())
-    add('app.platform', 'pass', `${process.platform} ${process.arch}`)
-    add('app.electron', 'pass', process.versions.electron || 'unknown')
-    add('app.node', 'pass', process.versions.node || 'unknown')
-
     // ── Build report ─────────────────────────────────────────────────
     const now = new Date()
     const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 14)
@@ -146,12 +185,18 @@ export function registerDiagnosticHandlers(db: PortiaDB) {
     const failCount = results.filter(r => r.status === 'fail').length
     const warnCount = results.filter(r => r.status === 'warn').length
 
+    // Extract SDK version for header
+    const sdkEntry = results.find(r => r.name === 'sdk.version')
+    const portiaEntry = results.find(r => r.name === 'portia.version')
+
     const lines = [
       '╔══════════════════════════════════════════════════════╗',
       '║          PORTIA DIAGNOSTIC REPORT                   ║',
       '╚══════════════════════════════════════════════════════╝',
       '',
       `Date: ${now.toISOString()}`,
+      `Portia: v${portiaEntry?.detail || 'unknown'}`,
+      `Pinecall SDK: v${sdkEntry?.detail || 'unknown'}`,
       `Summary: ${passCount} pass, ${failCount} fail, ${warnCount} warn`,
       '',
       '─── Results ────────────────────────────────────────────',

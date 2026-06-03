@@ -3,34 +3,39 @@
  *
  * Registers all event listeners on the agent and forwards them
  * as structured JSON to the renderer process.
+ *
+ * NOTE: Tool execution is handled by the SDK (auto-execute via tool()).
+ * We only emit tool events to the renderer for UI updates.
  */
 
-import type { Agent, Call } from '@pinecall/sdk'
+import type { Agent, Call, Turn } from '@pinecall/sdk'
+import type {
+  UserSpeakingEvent,
+  UserMessageEvent,
+  TurnPauseEvent,
+  TurnResumedEvent,
+  BotSpeakingEvent,
+  BotWordEvent,
+  BotFinishedEvent,
+  BotInterruptedEvent,
+  ToolCallEvent,
+} from '@pinecall/sdk'
 import type { PortiaDB } from '@main/db'
-import type { ToolContext } from '@main/agent/tools/types'
 import type { CallEvent } from '@shared/ipc-contracts'
-import { executeTool } from '@main/agent/tools/registry'
 import { saveVisitToDB } from '@main/agent/services/visit-recorder.service'
 import { getPromptVars } from '@main/agent/prompt/builder'
 import { createLogger } from '@main/logger'
 
 const log = createLogger('agent')
 
-// Event payload shapes from the SDK (camelCase)
-interface SpeechEvent { text?: string; messageId?: string }
-interface TurnEvent { probability?: number }
-interface BotEvent { messageId?: string; text?: string }
-interface BotWordEvent { messageId?: string; word?: string; wordIndex?: number }
-
 interface WireOptions {
   agent: Agent
-  ctx: ToolContext
   greeting: string
   emit: <E extends CallEvent['event']>(event: E, data: Omit<Extract<CallEvent, { event: E }>, 'event'>) => void
   db: PortiaDB
 }
 
-export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions): void {
+export function wireAgentEvents({ agent, greeting, emit, db }: WireOptions): void {
   // Call lifecycle
   agent.on('call.started', (call: Call) => {
     log.info(`Call started: ${call.direction} ${call.from} → ${call.to}`)
@@ -53,34 +58,34 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
   })
 
   // User speech
-  agent.on('user.speaking', (event: SpeechEvent, call: Call) => {
+  agent.on('user.speaking', (event: UserSpeakingEvent, call: Call) => {
     log.debug(`👤 (interim): ${event.text || ''}`)
-    emit('user.speaking', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
+    emit('user.speaking', { call_id: call.id, text: event.text || '', message_id: event.messageId || '' })
   })
 
-  agent.on('user.message', (event: SpeechEvent, call: Call) => {
+  agent.on('user.message', (event: UserMessageEvent, call: Call) => {
     log.info(`👤 User: ${event.text || ''}`)
-    emit('user.message', { call_id: call.id, text: event.text || '', message_id: event.message_id || '' })
+    emit('user.message', { call_id: call.id, text: event.text || '', message_id: event.messageId || '' })
   })
 
   // Turn detection
-  agent.on('turn.pause', (event: TurnEvent, call: Call) => {
+  agent.on('turn.pause', (event: TurnPauseEvent, call: Call) => {
     log.debug(`⏸ Turn pause (prob=${event.probability?.toFixed(2) || '?'})`)
     emit('turn.pause', { call_id: call.id, probability: event.probability })
   })
 
-  agent.on('turn.end', (event: TurnEvent, call: Call) => {
-    log.debug(`⏹ Turn end (prob=${event.probability?.toFixed(2) || '?'})`)
-    emit('turn.end', { call_id: call.id, probability: event.probability })
+  agent.on('turn.end', (turn: Turn, call: Call) => {
+    log.debug(`⏹ Turn end (prob=${turn.probability?.toFixed(2) || '?'})`)
+    emit('turn.end', { call_id: call.id, probability: turn.probability })
   })
 
-  agent.on('turn.resumed', (_event: unknown, call: Call) => {
+  agent.on('turn.resumed', (_event: TurnResumedEvent, call: Call) => {
     log.debug('▶ Turn resumed')
     emit('turn.resumed', { call_id: call.id })
   })
 
   // Bot speech
-  agent.on('bot.speaking', (event: BotEvent, call: Call) => {
+  agent.on('bot.speaking', (event: BotSpeakingEvent, call: Call) => {
     log.info(`🤖 Speaking: msg=${event.messageId}`)
     emit('bot.speaking', { call_id: call.id, message_id: event.messageId || '', text: event.text || '' })
   })
@@ -89,35 +94,26 @@ export function wireAgentEvents({ agent, ctx, greeting, emit, db }: WireOptions)
     emit('bot.word', { call_id: call.id, message_id: event.messageId || '', word: event.word || '', word_index: event.wordIndex })
   })
 
-  agent.on('bot.finished', (event: BotEvent, call: Call) => {
+  agent.on('bot.finished', (event: BotFinishedEvent, call: Call) => {
     log.info(`🤖 Finished: msg=${event.messageId}`)
     emit('bot.finished', { call_id: call.id, message_id: event.messageId || '' })
   })
 
-  agent.on('bot.interrupted', (event: BotEvent, call: Call) => {
+  agent.on('bot.interrupted', (event: BotInterruptedEvent, call: Call) => {
     log.info(`🤖 Interrupted: msg=${event.messageId}`)
     emit('bot.interrupted', { call_id: call.id, message_id: event.messageId || '' })
   })
 
-  // Tool calls — execute locally, send results back to server
-  agent.on('llm.tool_call', async (data, call: Call) => {
-    log.info(`🔧 Tools: ${data.toolCalls.map(tc => tc.name).join(', ')} (msg=${data.msgId})`)
-    emit('llm.tool_call', { call_id: call.id, tool_calls: data.toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' })) })
+  // Tool calls — SDK auto-executes via tool(). We only emit for the renderer UI.
+  agent.on('llm.tool_call', (data: ToolCallEvent, call: Call) => {
+    const mapped = data.toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' }))
+    log.info(`🔧 Tools: ${mapped.map(tc => `${tc.name}(${tc.arguments})`).join(', ')} (msg=${data.msgId})`)
+    emit('llm.tool_call', { call_id: call.id, tool_calls: mapped })
+  })
 
-    const results: Array<{ toolCallId: string; result: unknown }> = []
-    for (const tc of data.toolCalls) {
-      let result: unknown
-      try {
-        const args = JSON.parse(tc.arguments || '{}')
-        result = await executeTool(tc.name, args, call, ctx)
-      } catch (err: unknown) {
-        result = { error: err instanceof Error ? err.message : String(err) }
-      }
-      log.info(`✅ ${tc.name}: ${JSON.stringify(result).slice(0, 100)}`)
-      emit('llm.tool_result', { call_id: call.id, result: JSON.stringify(result) })
-      results.push({ toolCallId: tc.id, result })
-    }
-
-    call.toolResult(data.msgId, results)
+  // Tool results — emitted after SDK auto-executes each tool
+  agent.on('llm.tool_result', (data: any, call: Call) => {
+    const resultText = typeof data.result === 'string' ? data.result : JSON.stringify(data.result ?? '')
+    emit('llm.tool_result', { call_id: call.id, result: resultText })
   })
 }

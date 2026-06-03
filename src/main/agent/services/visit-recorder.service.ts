@@ -23,7 +23,7 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
     let visitorName = 'Unknown visitor'
     let hasDoorSuccess = false
 
-    const messages = (call.messages || []) as ChatMessage[]
+    const messages = (call.messages || []) as unknown as ChatMessage[]
     for (const m of messages) {
       if (m.role === 'system') continue
 
@@ -59,9 +59,7 @@ export function saveVisitToDB(call: Call, reason: string, db: PortiaDB): void {
       (allLines.length > 0 ? `\n\nTranscript (${t.length} messages):\n${allLines.join('\n')}` : '')
 
     const outcome = hasDoorSuccess ? 'granted' : 'denied'
-    const duration = typeof (call as Record<string, unknown>).duration === 'number'
-      ? Math.floor((call as Record<string, unknown>).duration as number)
-      : 0
+    const duration = typeof call.duration === 'number' ? Math.floor(call.duration) : 0
 
     db.addVisit({
       visitorName, company: null, hostId: null, accessCodeUsed: null,

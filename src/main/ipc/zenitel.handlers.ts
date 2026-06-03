@@ -70,14 +70,18 @@ export function registerZenitelHandlers(db: PortiaDB) {
     const sipName = ENV.SIP_NAME
     const sipId = ENV.SIP_ID
 
+    // Agent's SIP ID — the intercom DAK must call this, not itself
+    const agentSipId = config.agentPhone
+
     // Pre-flight validation
     if (!sipDomain) return { error: 'Missing SIP domain (PORTIA_SIP_DOMAIN)' }
     if (!sipId) return { error: 'Missing SIP ID (PORTIA_SIP_ID)' }
+    if (!agentSipId) return { error: 'Missing agent phone (run wizard first)' }
     if (!ENV.SIP_AUTH_USER) return { error: 'Missing SIP auth user (PORTIA_SIP_AUTH_USER)' }
     if (!ENV.SIP_AUTH_PASS) return { error: 'Missing SIP auth password (PORTIA_SIP_AUTH_PASS)' }
 
-    // DAK target — use the configured SIP ID (e.g. "222@domain")
-    const dakAddress = `${sipId}@${sipDomain}`
+    // DAK target — intercom button calls the agent's random SIP ID (e.g. "portia-ef99@domain")
+    const dakAddress = `${agentSipId}@${sipDomain}`
 
     // Read current state to avoid unnecessary writes + reboots
     const currentSip = await z.getSIPConfig()
@@ -138,7 +142,7 @@ export function registerZenitelHandlers(db: PortiaDB) {
 
   ipcMain.handle('zenitel:set-mode', async (_, mode: string) => {
     const z = _client(db.getConfig())
-    await z.setMode(mode as 'sip' | 'dip' | 'exc' | 'srv' | 'pulse')
+    await z.setMode(mode as 'sip' | 'dip' | 'exc' | 'srv')
     await z.applyChanges()
   })
 

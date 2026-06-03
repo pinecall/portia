@@ -107,7 +107,7 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
         // Hot-reload prompt if preset or custom prompt changed
         if (updates.promptPreset || updates.customPrompt) {
           const { getPromptTemplate } = await import('@main/agent/prompt/builder')
-          body.llm = { ...body.llm, prompt: getPromptTemplate(db) }
+          body.llm = { ...(body.llm as Record<string, unknown> || {}), prompt: getPromptTemplate(db) }
         }
         if (Object.keys(body).length) {
           state.agent.configure(body)

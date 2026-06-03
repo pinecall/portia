@@ -13,8 +13,8 @@ export function addVisit(visit: VisitInput): VisitInput {
   run(
     `INSERT INTO visits (visitor_name, company, host_id, access_code_used, duration, outcome, call_id, summary)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [visit.visitorName, visit.company, visit.hostId, visit.accessCodeUsed,
-     visit.duration || 0, visit.outcome || 'pending', visit.callId, visit.summary],
+    [visit.visitorName ?? null, visit.company ?? null, visit.hostId ?? null, visit.accessCodeUsed ?? null,
+     visit.duration || 0, visit.outcome || 'pending', visit.callId ?? null, visit.summary ?? null],
   )
   return visit
 }
