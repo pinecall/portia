@@ -18,6 +18,8 @@ export interface AppConfig {
   language: string
   wizardCompleted: boolean
   theme: string
+  // Version tracking — triggers re-seed on app update
+  seedVersion?: string | null
   // Dynamic fields (stored in config KV but not always present)
   agentId?: string | null
   sipId?: string | null

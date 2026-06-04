@@ -113,10 +113,19 @@ app.whenReady().then(async () => {
     Object.assign(config, updates)
   }
 
-  // Auto-seed demo data on first launch (no building name = fresh install)
-  if (!config.buildingName) {
+  // Version-based re-seed: ensures demo data stays current across updates.
+  // If seedVersion is missing (pre-0.2.1 DBs) or differs from app version,
+  // clear old data and re-seed with latest Cointel demo data.
+  const appVersion = app.getVersion()
+  if (config.seedVersion !== appVersion) {
+    const isFirstLaunch = !config.buildingName
+    if (!isFirstLaunch) {
+      log.info(`Seed version mismatch: db=${config.seedVersion || 'none'} app=${appVersion} — re-seeding`)
+      db.clearAll()
+    }
     seedDemoData(db)
-    log.info('First launch — seeded demo data')
+    db.updateConfig({ seedVersion: appVersion })
+    log.info(isFirstLaunch ? 'First launch — seeded demo data' : `Re-seeded demo data for v${appVersion}`)
   }
 
   // 3. Window
