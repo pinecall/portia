@@ -91,7 +91,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
     tools,
   })
 
-  agent.addChannel('phone', opts.sipUri, {
+  agent.phone(opts.sipUri, {
     voice,
     language: opts.language || 'es',
     stt: sttConfig,
@@ -99,7 +99,7 @@ export async function createAgent(opts: PortiaAgentOptions) {
 
   // Optional test phone number
   if (process.env.PORTIA_TEST_PHONE) {
-    agent.addChannel('phone', process.env.PORTIA_TEST_PHONE, {
+    agent.phone(process.env.PORTIA_TEST_PHONE, {
       voice,
       language: opts.language || 'es',
       stt: sttConfig,
