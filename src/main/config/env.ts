@@ -32,7 +32,7 @@ export const ENV = {
   VOICE_ID: process.env.PORTIA_VOICE_ID || '',
 
   /** LLM model for the agent */
-  LLM_MODEL: process.env.PORTIA_LLM_MODEL || 'gpt-4.1-mini',
+  LLM_MODEL: process.env.PORTIA_LLM_MODEL || 'gpt-5-chat-latest',
 
   /** Default Zenitel credentials */
   ZENITEL_USER: process.env.PORTIA_ZENITEL_USER || 'admin',

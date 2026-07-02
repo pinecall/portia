@@ -105,10 +105,10 @@ export function wireAgentEvents({ agent, greeting, emit, db }: WireOptions): voi
   })
 
   // Tool calls — SDK auto-executes via tool(). We only emit for the renderer UI.
-  agent.on('llm.tool_call', (data: ToolCallEvent, call: Call) => {
+  agent.on('llm.toolCall', (data: ToolCallEvent, call: Call) => {
     const mapped = data.toolCalls.map(tc => ({ name: tc.name, arguments: tc.arguments || '{}' }))
     log.info(`🔧 Tools: ${mapped.map(tc => `${tc.name}(${tc.arguments})`).join(', ')} (msg=${data.msgId})`)
-    emit('llm.tool_call', { call_id: call.id, tool_calls: mapped })
+    emit('llm.toolCall', { call_id: call.id, tool_calls: mapped })
   })
 
   // Tool results — emitted after SDK auto-executes each tool

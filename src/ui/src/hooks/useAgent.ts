@@ -250,7 +250,7 @@ export function useAgent() {
       }
 
       // llm.tool_call
-      if (event === 'llm.tool_call') {
+      if (event === 'llm.toolCall') {
         const toolCalls = ev.tool_calls || []
         setLiveCall(prev => {
           if (!prev || prev.id !== callId) return prev

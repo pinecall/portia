@@ -62,5 +62,5 @@ export type CallEvent =
   | { event: 'bot.word'; call_id: string; message_id: string; word: string; word_index?: number }
   | { event: 'bot.finished'; call_id: string; message_id: string }
   | { event: 'bot.interrupted'; call_id: string; message_id: string }
-  | { event: 'llm.tool_call'; call_id: string; tool_calls: Array<{ name: string; arguments: string }> }
+  | { event: 'llm.toolCall'; call_id: string; tool_calls: Array<{ name: string; arguments: string }> }
   | { event: 'llm.tool_result'; call_id: string; result: string }

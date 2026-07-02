@@ -11,6 +11,31 @@ import { createLogger } from '@main/logger'
 
 const log = createLogger('agent')
 
+/** Default STT provider for Portia — ElevenLabs Scribe v2 (realtime). */
+export const DEFAULT_STT_PROVIDER = 'elevenlabs'
+
+/** STT providers that actually consume keyterms (the Deepgram family). */
+const KEYTERM_PROVIDERS = new Set(['deepgram', 'deepgram-flux'])
+
+/**
+ * Build the provider-specific STT config object sent to the server.
+ * Single source of truth — used at agent creation, keyterm refresh, and hot-reload.
+ *
+ * - `elevenlabs`     → Scribe v2 realtime (`scribe_v2_realtime`); ignores keyterms.
+ * - `deepgram*`      → attaches keyterms for name/code boosting.
+ */
+export function buildSttConfig(provider: string, keyterms: string[] = []): Record<string, unknown> {
+  const cfg: Record<string, unknown> = { provider }
+  if (provider === 'elevenlabs') cfg.model = 'scribe_v2_realtime'
+  if (KEYTERM_PROVIDERS.has(provider) && keyterms.length) cfg.keyterms = keyterms
+  return cfg
+}
+
+/** Whether a provider benefits from keyterm boosting (drives refreshKeyterms). */
+export function usesKeyterms(provider: string): boolean {
+  return KEYTERM_PROVIDERS.has(provider)
+}
+
 export function buildKeyterms(db: PortiaDB): string[] {
   const terms = new Set<string>()
 

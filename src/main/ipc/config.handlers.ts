@@ -96,7 +96,10 @@ export function registerConfigHandlers(window: BrowserWindow, db: PortiaDB) {
       if (state?.agent) {
         const body: Record<string, unknown> = {}
         if (updates.agentVoice) body.voice = updates.agentVoice
-        if (updates.agentSttProvider) body.stt = { provider: updates.agentSttProvider }
+        if (updates.agentSttProvider) {
+          const { buildSttConfig, buildKeyterms } = await import('@main/agent/keyterms')
+          body.stt = buildSttConfig(updates.agentSttProvider, buildKeyterms(db))
+        }
         if (updates.agentLlmModel || updates.agentLlmEngine) {
           body.llm = {
             ...(updates.agentLlmModel && { model: updates.agentLlmModel }),

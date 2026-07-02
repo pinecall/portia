@@ -15,7 +15,7 @@ import type { CallEvent } from '@shared/ipc-contracts'
 import { ENV } from '@main/config/env'
 import { createLogger } from '@main/logger'
 import { getPromptTemplate, getPromptVars, buildGreeting } from './prompt/builder'
-import { buildKeyterms } from './keyterms'
+import { buildKeyterms, buildSttConfig, DEFAULT_STT_PROVIDER } from './keyterms'
 import { createTools, type ToolContext } from './tools/tools'
 import { wireAgentEvents } from './events/wire'
 
@@ -69,8 +69,8 @@ export async function createAgent(opts: PortiaAgentOptions) {
   const greeting = buildGreeting(opts.db)
   const tools = createTools({ db: opts.db, zenitel: opts.zenitel })
   const keyterms = buildKeyterms(opts.db)
-  const sttProvider = opts.sttProvider || 'deepgram-flux'
-  const sttConfig = { provider: sttProvider, keyterms }
+  const sttProvider = opts.sttProvider || DEFAULT_STT_PROVIDER
+  const sttConfig = buildSttConfig(sttProvider, keyterms)
 
   const llmProvider = opts.llmProvider || 'openai'
   const llmModel = opts.llmModel || ENV.LLM_MODEL

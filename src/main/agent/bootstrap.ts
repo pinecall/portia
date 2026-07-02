@@ -9,7 +9,7 @@ import type { PortiaDB } from '@main/db'
 import type { BrowserWindow } from 'electron'
 import type { Agent } from '@pinecall/sdk'
 import { ENV } from '@main/config/env'
-import { buildKeyterms } from './keyterms'
+import { buildKeyterms, buildSttConfig, usesKeyterms, DEFAULT_STT_PROVIDER } from './keyterms'
 import { createLogger } from '@main/logger'
 
 const log = createLogger('agent')
@@ -98,10 +98,15 @@ export function getAgentState() {
  */
 export function refreshKeyterms(): void {
   if (!agentState) return
+  // Keyterm boosting only applies to the Deepgram family. For providers that
+  // ignore keyterms (e.g. ElevenLabs Scribe) there's nothing to push — and we
+  // must NOT reconfigure STT here, or we'd silently switch the live provider.
+  const provider = agentState.db.getConfig().agentSttProvider || DEFAULT_STT_PROVIDER
+  if (!usesKeyterms(provider)) return
   try {
     const keyterms = buildKeyterms(agentState.db)
     agentState.agent.configure({
-      stt: { provider: 'deepgram-flux', keyterms },
+      stt: buildSttConfig(provider, keyterms),
     })
     log.info(`Keyterms refreshed: ${keyterms.length} terms`)
   } catch (err: unknown) {

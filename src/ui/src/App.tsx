@@ -718,6 +718,7 @@ function SettingsPage({ config, zenitel }: any) {
 // ── Agent Settings ───────────────────────────────────────────────────────
 
 const LLM_MODELS = [
+  { id: 'gpt-5-chat-latest', label: 'GPT-5 Chat', engine: 'openai' },
   { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', engine: 'openai' },
   { id: 'gpt-4.1', label: 'GPT-4.1', engine: 'openai' },
   { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', engine: 'openai' },
@@ -729,6 +730,7 @@ const LLM_MODELS = [
 ]
 
 const STT_PROVIDERS = [
+  { id: 'elevenlabs', label: 'ElevenLabs Scribe', desc: 'Scribe v2 realtime' },
   { id: 'deepgram-flux', label: 'Deepgram Flux', desc: 'Ultra-low latency' },
   { id: 'deepgram', label: 'Deepgram Nova-3', desc: 'Best accuracy' },
   { id: 'gladia', label: 'Gladia Solaria', desc: 'Arabic, Hebrew, multi-lang' },
@@ -770,8 +772,8 @@ function AgentSettings({ config }: { config: any }) {
   const [voice, setVoice] = useState(config.agentVoice || '')
   const [voiceName, setVoiceName] = useState('Loading...')
   const [voiceLoaded, setVoiceLoaded] = useState(false)
-  const [llmModel, setLlmModel] = useState(config.agentLlmModel || 'gpt-4.1-mini')
-  const [sttProvider, setSttProvider] = useState(config.agentSttProvider || 'deepgram-flux')
+  const [llmModel, setLlmModel] = useState(config.agentLlmModel || 'gpt-5-chat-latest')
+  const [sttProvider, setSttProvider] = useState(config.agentSttProvider || 'elevenlabs')
   const [ttsProvider, setTtsProvider] = useState(config.agentTtsProvider || 'elevenlabs')
   const [turnDetection, setTurnDetection] = useState(config.agentTurnDetection || 'native')
   const [language, setLanguage] = useState(config.language || 'es')
@@ -807,7 +809,7 @@ function AgentSettings({ config }: { config: any }) {
 
   // Map preset → default model
   const PRESET_MODELS: Record<string, { model: string; engine: string }> = {
-    openai: { model: 'gpt-4.1-mini', engine: 'openai' },
+    openai: { model: 'gpt-5-chat-latest', engine: 'openai' },
     mistral: { model: 'mistral-medium-latest', engine: 'mistral' },
   }
 

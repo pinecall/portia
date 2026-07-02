@@ -9,4 +9,4 @@
 
 // The SDK now exports ToolCallEvent and ToolCallItem natively.
 // No augmentation needed — AgentEvents already includes:
-//   'llm.tool_call': (event: ToolCallEvent, call: Call) => void
+//   'llm.toolCall': (event: ToolCallEvent, call: Call) => void
